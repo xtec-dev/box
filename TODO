@@ -1,0 +1,13 @@
+# TODO
+
+https://www.osboxes.org/ubuntu-server/
+
+The username is "osboxes.org" and the password is "osboxes.org". We recommend that you use VirtualBox 5.2.
+
+https://raywoodcockslatest.wordpress.com/2019/11/12/renaming-the-osboxes-user-creating-a-user-in-an-osboxes-linux-vm/
+
+
+https://cloud-images.ubuntu.com/releases/22.04/release/
+
+virt-customize -a bionic-server-cloudimg-amd64.img --root-password password:password
+sudo apt install libguestfs-tools
