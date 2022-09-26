@@ -1,6 +1,8 @@
 Vagrant.configure("2") do |config|
 
-  config.vm.box = "alvistack/ubuntu-22.04"
+  config.vm.box = "peru/ubuntu-20.04-server-amd64"
+  #config.vm.box = "alvistack/ubuntu-22.04"
+  # TODO to 127:0.0.1
   config.vm.network :forwarded_port, guest: 3000, host: 3000
   config.vm.network :forwarded_port, guest: 3001, host: 3001
   config.vm.network :forwarded_port, guest: 8080, host: 8080
