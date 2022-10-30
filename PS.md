@@ -1,0 +1,11 @@
+# PS
+
+https://renenyffenegger.ch/notes/Companies-Products/Oracle/VM-VirtualBox/command-line/PowerShell/unattended-os-installation
+
+https://github.com/ajbrehm/NNVirtualBoxPowerShellModule
+
+http://desertpenguin.org/blog/nnvirtualboxpowershellmodul.html
+
+https://www.how2shout.com/how-to/vboxmanage-command-not-found-in-windows-cmd-or-powershell.html
+
+https://forums.virtualbox.org/viewtopic.php?t=95930
