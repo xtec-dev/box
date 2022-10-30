@@ -1,8 +1,10 @@
 #
 # Add Virtual Box bin-path to PATH environment variable if necessary:
 #
-if ( $IsWindows &&  (get-command VBoxManage.exe -errorAction silentlyContinue) -eq $null) {
-    $env:path="C:\Program Files\Oracle\VirtualBox;$env:path"
+if ($null -eq (get-command VBoxManage -errorAction silentlyContinue)) {
+    if ($IsWindows) {
+        $env:path="C:\Program Files\Oracle\VirtualBox;$env:path"
+    }
 }
 
 Write-Host(VBoxManage startvm xtec-1 --type headless)
