@@ -12,6 +12,20 @@ if ( $IsWindows) {
 class VM {
     [string]$Name
     [String]$SSH
+
+    [void] Start() {
+        Write-Host(vboxmanage startvm $this.Name --type headless)
+    }
+
+    # TODO wait
+    [void] Stop() {
+        Write-Host(vboxmanage controlvm $this.Name acpipowerbutton)
+        #echo "Waiting for machine $MACHINE to poweroff..."
+        #until $(VBoxManage showvminfo --machinereadable $MACHINE | grep -q ^VMState=.poweroff.)
+        #do
+        #  sleep 1
+        #done
+    }
 }
 
 $vms = New-Object Collections.Generic.List[VM]
@@ -24,25 +38,29 @@ foreach ($i in 1..2) {
 
 # vboxmanage list vms
 
-# https://docs.oracle.com/en/virtualization/virtualbox/6.0/user/vboxmanage-hostonlyif.html
-# https://docs.oracle.com/en/virtualization/virtualbox/6.0/user/network_hostonly.html
-# https://gist.github.com/magnetikonline/46a483cc8c9d0451074642f860d0cac1
-
-# TODO check exists
-
-#vboxmanage list hostonlyifs
-# VBoxManage hostonlyif create
 
 $ifname = "vboxnet0"
+# TODO check exists
+#vboxmanage list hostonlyifs
+# VBoxManage hostonlyif create
 vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
 vboxmanage dhcpserver modify --ifname $ifname --disable
 
 foreach ($vm in $vms) {
+
+    $vm.Stop()
+    
     vboxmanage modifyvm $vm.Name --nic1 nat
+    vboxmanage modifyvm $vm.Name --natpf1 delete ssh
+    vboxmanage modifyvm $vm.Name --natpf1 "ssh,tcp,127.0.0.1,$($vm.SSH),,22"
+    
     vboxmanage modifyvm $vm.Name --nic2 hostonly --hostonlyadapter2 $ifname
+    $vm.Start()
 }
 
-# https://www.how2shout.com/how-to/vboxmanage-command-not-found-in-windows-cmd-or-powershell.html
+#$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+
+
 
 
 
