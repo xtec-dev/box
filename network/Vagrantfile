@@ -1,0 +1,29 @@
+Vagrant.configure("2") do |config|
+
+    config.vm.define "vm1" do |vm1|
+        vm1.vm.box = "peru/ubuntu-20.04-server-amd64"
+        vm1.vm.hostname = 'vm-1'
+    
+        vm1.vm.network :private_network, ip: "192.168.56.101"
+
+        vm1.vm.provider "virtualbox" do |vbox|
+            vbox.name = "vm-1"
+            vbox.memory = "2048"
+            vbox.cpus = 2
+        end
+    end
+
+    config.vm.define "vm2" do |vm2|
+        vm2.vm.box = "peru/ubuntu-20.04-server-amd64"
+        vm2.vm.hostname = 'vm-2'
+    
+        vm2.vm.network :private_network, ip: "192.168.56.102"
+
+        vm2.vm.provider "virtualbox" do |vbox|
+            vbox.name = "vm-2"
+            vbox.memory = "2048"
+            vbox.cpus = 2
+        end
+    end
+
+end
