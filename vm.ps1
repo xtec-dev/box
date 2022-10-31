@@ -1,6 +1,10 @@
 
 
-#VBoxManage showvminfo $vmName --machinereadable 
+# TODO clone 2,3
+# change ova with default ssh public key
+# reduce ova size, rm vagrant folder and mount
+
+# TODO   vm start x | stop 
 
 class VM {
     [string]$Name
@@ -31,6 +35,10 @@ class VM {
     }
 }
 
+# https://adamtheautomator.com/powershell-download-file/
+# TODO linux wget ??? win BitTrasnfer
+
+#https://superuser.com/questions/1097048/download-big-files-with-powershell
 function DriveDownload {
     param(
         [string]$GoogleFileId,
@@ -63,6 +71,7 @@ if ( $IsWindows) {
 }
 
 
+# TODO not working
 
 <#
 $ova = "xtec.ova"
