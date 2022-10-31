@@ -20,12 +20,13 @@ class VM {
 
     [void] Stop() {
         # TODO State()
-        Write-Host(vboxmanage controlvm $this.Name acpipowerbutton)
 
         $info = VBoxManage showvminfo --machinereadable $this.Name
         while (-not($info -like 'VMState="poweroff"')) {
+            vboxmanage controlvm $this.Name acpipowerbutton
             Write-Host("Waiting for machine $($this.Name) to poweroff...")
-            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 2
+            $info = VBoxManage showvminfo --machinereadable $this.Name
         }
     }
 }
@@ -76,7 +77,7 @@ if (-not(Test-Path $ova -PathType Leaf)) {
 
 # vboxmanage list vms
 $vms = New-Object Collections.Generic.List[VM]
-foreach ($i in 1..2) {
+foreach ($i in 1..1) {
     $vm = [VM]::new();
     $vm.Name = "xtec-$i"
     $vm.SSH = "220$i"
