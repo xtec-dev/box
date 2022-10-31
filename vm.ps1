@@ -1,16 +1,6 @@
 
-if ( $IsWindows) {
-    if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
-        $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
-    }
-}
-
-#  https://docs.oracle.com/en/virtualization/virtualbox/6.0/user/vboxmanage-guestcontrol.html
 
 #VBoxManage showvminfo $vmName --machinereadable 
-
-
-
 
 class VM {
     [string]$Name
@@ -19,6 +9,8 @@ class VM {
     [void] Delete() {
         $this.Stop()
         Write-Host(vboxmanage unregister $this.name --delete)
+        #rmdir -recurse $vmPath
+        #rmdir -recurse $sharedFolder
 
     }
 
@@ -26,14 +18,15 @@ class VM {
         Write-Host(vboxmanage startvm $this.Name --type headless)
     }
 
-    # TODO wait
     [void] Stop() {
+        # TODO State()
         Write-Host(vboxmanage controlvm $this.Name acpipowerbutton)
-        #echo "Waiting for machine $MACHINE to poweroff..."
-        #until $(VBoxManage showvminfo --machinereadable $MACHINE | grep -q ^VMState=.poweroff.)
-        #do
-        #  sleep 1
-        #done
+
+        $info = VBoxManage showvminfo --machinereadable $this.Name
+        while (-not($info -like 'VMState="poweroff"')) {
+            Write-Host("Waiting for machine $($this.Name) to poweroff...")
+            Start-Sleep -Seconds 1
+        }
     }
 }
 
@@ -62,13 +55,26 @@ function DriveDownload {
 
 ##### MAIN #####
 
+if ( $IsWindows) {
+    if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
+        $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
+    }
+}
+
+
+
+<#
 $ova = "xtec.ova"
 
 if (-not(Test-Path $ova -PathType Leaf)) {
     Write-Host("Downloading xtec.ova from Google Drive")
     DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -FileDestionatoin "xtec.ova"
 }
+#>
 
+# VBoxManage clonevm $vmName --name=$vmNameClone --register
+
+# vboxmanage list vms
 $vms = New-Object Collections.Generic.List[VM]
 foreach ($i in 1..2) {
     $vm = [VM]::new();
@@ -76,9 +82,6 @@ foreach ($i in 1..2) {
     $vm.SSH = "220$i"
     $vms.Add($vm)
 }
-
-exit
-# vboxmanage list vms
 
 
 $ifname = "vboxnet0"
