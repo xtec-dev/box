@@ -64,11 +64,13 @@ function DriveDownload {
 
 ##### MAIN #####
 
-if ( $IsWindows) {
+if ( $Env:OS.StartsWith("Windows")) {
     if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
         $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
     }
 }
+
+
 
 
 # TODO not working
