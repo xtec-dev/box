@@ -6,6 +6,8 @@
 
 # TODO   vm start x | stop 
 
+$ova = "xtec.ova"
+
 class VM {
     [string]$Name
     [String]$SSH
@@ -15,10 +17,19 @@ class VM {
         Write-Host(vboxmanage unregister $this.name --delete)
         #rmdir -recurse $vmPath
         #rmdir -recurse $sharedFolder
-
     }
 
     [void] Start() {
+
+        $vms = vboxmanage list vms
+        if (-not($vms -eq $this.Name)) {
+            Write-Host("Could not find a registered machine named '$($this.Name)'")
+            vboxmanage import xtec-ova --vmname $this.Name
+        }
+        else {
+            $this.Stop()
+        }
+
         Write-Host(vboxmanage startvm $this.Name --type headless)
     }
 
@@ -45,11 +56,11 @@ function DriveDownload {
 
     $source = "https://drive.google.com/uc?export=download&confirm=t&id=$GoogleFileId"
 
-    if ( $Env:OS.StartsWith("Windows")) {
+    if ( $env:OS -eq 'Windows_NT') {
         Start-BitsTransfer -Source $source -Destination $Destination
-    } else {
+    }
+    else {
         Write-Host("TODO wget in linux")
-        exit 1
     }
 }
 
@@ -57,7 +68,7 @@ function DriveDownload {
 
 ##### MAIN #####
 
-if ( $Env:OS.StartsWith("Windows")) {
+if ( $env:OS -eq 'Windows_NT') {
     if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
         $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
     }
@@ -65,19 +76,17 @@ if ( $Env:OS.StartsWith("Windows")) {
 
 
 
-$ova = "xtec.ova"
 if (-not(Test-Path $ova -PathType Leaf)) {
     Write-Host("Downloading xtec.ova from Google Drive")
     DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination "xtec.ova"
 }
 
-exit
 
 # VBoxManage clonevm $vmName --name=$vmNameClone --register
 
 # vboxmanage list vms
 $vms = New-Object Collections.Generic.List[VM]
-foreach ($i in 1..1) {
+foreach ($i in 2..2) {
     $vm = [VM]::new();
     $vm.Name = "xtec-$i"
     $vm.SSH = "220$i"
@@ -94,6 +103,7 @@ vboxmanage dhcpserver modify --ifname $ifname --disable
 
 foreach ($vm in $vms) {
 
+    <#
     $vm.Stop()
     
     vboxmanage modifyvm $vm.Name --nic1 nat
@@ -101,6 +111,7 @@ foreach ($vm in $vms) {
     vboxmanage modifyvm $vm.Name --natpf1 "ssh,tcp,127.0.0.1,$($vm.SSH),,22"
     
     vboxmanage modifyvm $vm.Name --nic2 hostonly --hostonlyadapter2 $ifname
+    #>
     $vm.Start()
 }
 
