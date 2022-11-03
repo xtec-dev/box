@@ -22,13 +22,16 @@ class VM {
     [void] Start() {
 
         $vms = vboxmanage list vms
-        if (-not($vms -eq $this.Name)) {
-            Write-Host("Could not find a registered machine named '$($this.Name)'")
-            vboxmanage import xtec-ova --vmname $this.Name
-        }
-        else {
+        if ($vms -like "*$($this.Name)*") {
             $this.Stop()
         }
+        else {
+            Write-Host("Could not find a registered machine named '$($this.Name)'")
+            vboxmanage import xtec.ova --vsys 0 --vmname $this.Name
+        }
+        
+
+        exit
 
         Write-Host(vboxmanage startvm $this.Name --type headless)
     }
