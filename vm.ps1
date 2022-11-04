@@ -1,7 +1,6 @@
 
 
-# change ova with default ssh public key
-# reduce ova size, rm vagrant folder and mount
+# Change default pk with user pk
 
 $global:ova = "xtec.ova"
 $global:ifname = "vboxnet0"
@@ -137,6 +136,7 @@ function Start() {
 }
 
 function Stop() {
+    # TODO list all xtec machines and stop
     foreach ($vm in $vms) {
         $vm.Stop()
     }
@@ -145,22 +145,26 @@ function Stop() {
 
 $cmd = $args[0]
 switch ($cmd) {
+    ssh {
+        # TODO default argument 1
+        $id = $args[1]
+        ssh -p 220$id -i $global:ssh_sk  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+    }
+
+    start {
+        Start
+    }
     status {
         $vms = vboxmanage list vms
         foreach ($vm in $vms) {
             Write-Host $vm
         }
     }
-    ssh {
-        # TODO default argument 1
-        $id = $args[1]
-        ssh -p 220$id -i $global:ssh_sk  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
-    }
     stop { 
         Stop 
     }
     Default {
-        Start
+        Write-Host("Usage: vm.ps1 start | stop | ssh | status")
     }
 }
 
