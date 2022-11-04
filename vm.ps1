@@ -3,11 +3,9 @@
 # change ova with default ssh public key
 # reduce ova size, rm vagrant folder and mount
 
-#ssh -p 2201 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
-
-
 $global:ova = "xtec.ova"
 $global:ifname = "vboxnet0"
+$global:ssh_sk = "$HOME/.ssh/id_ed25519_xtec"
 
 class VM {
     [string]$Name
@@ -76,6 +74,23 @@ function DriveDownload {
     }
 }
 
+function SSHConfig {
+    
+    $file = $global:ssh_sk
+
+    if (-not(Test-Path $file -PathType Leaf)) {
+        New-Item -Path $file -ItemType File -Force
+        # TODO if linux change permission,use newline
+        Set-Content $file -NoNewline "-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBBeYoYAKtcIYloqqAe21RQoxtP/Zs1GzIN0uIz35mt2AAAAJB6j5yveo+c
+rwAAAAtzc2gtZWQyNTUxOQAAACBBeYoYAKtcIYloqqAe21RQoxtP/Zs1GzIN0uIz35mt2A
+AAAEC5SPSQvW7DimyU4MYx6SQCVAGXWCNNWmXMGEorEdt150F5ihgAq1whiWiqoB7bVFCj
+G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
+-----END OPENSSH PRIVATE KEY-----"
+    }
+}
+
 
 
 ##### MAIN #####
@@ -93,6 +108,9 @@ if (-not(Test-Path $ova -PathType Leaf)) {
     DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination "xtec.ova"
 }
 
+SSHConfig
+
+
 # TODO check exists
 #vboxmanage list hostonlyifs
 # VBoxManage hostonlyif create
@@ -103,7 +121,7 @@ vboxmanage dhcpserver modify --ifname $ifname --disable
 
 # vboxmanage list vms
 $global:vms = New-Object Collections.Generic.List[VM]
-foreach ($i in 1..2) {
+foreach ($i in 1..1) {
     $vm = [VM]::new();
     $vm.Name = "xtec-$i"
     $vm.SSH = "220$i"
@@ -127,6 +145,17 @@ function Stop() {
 
 $cmd = $args[0]
 switch ($cmd) {
+    status {
+        $vms = vboxmanage list vms
+        foreach ($vm in $vms) {
+            Write-Host $vm
+        }
+    }
+    ssh {
+        # TODO default argument 1
+        $id = $args[1]
+        ssh -p 220$id -i $global:ssh_sk  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+    }
     stop { 
         Stop 
     }
@@ -134,9 +163,6 @@ switch ($cmd) {
         Start
     }
 }
-
-
-
 
 
 
