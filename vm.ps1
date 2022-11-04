@@ -1,12 +1,13 @@
 
 
-# TODO clone 2,3
 # change ova with default ssh public key
 # reduce ova size, rm vagrant folder and mount
 
-# TODO   vm start x | stop 
+#ssh -p 2201 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
 
-$ova = "xtec.ova"
+
+$global:ova = "xtec.ova"
+$global:ifname = "vboxnet0"
 
 class VM {
     [string]$Name
@@ -29,11 +30,19 @@ class VM {
             Write-Host("Could not find a registered machine named '$($this.Name)'")
             vboxmanage import xtec.ova --vsys 0 --vmname $this.Name
         }
-        
 
-        exit
+
+        vboxmanage modifyvm $this.Name --nic1 nat
+        vboxmanage modifyvm $this.Name --natpf1 delete ssh
+        vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
+    
+        vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $global:ifname
+
 
         Write-Host(vboxmanage startvm $this.Name --type headless)
+
+        # set-hostname
+        # apply netplan
     }
 
     [void] Stop() {
@@ -84,12 +93,17 @@ if (-not(Test-Path $ova -PathType Leaf)) {
     DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination "xtec.ova"
 }
 
+# TODO check exists
+#vboxmanage list hostonlyifs
+# VBoxManage hostonlyif create
+vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
+vboxmanage dhcpserver modify --ifname $ifname --disable
 
-# VBoxManage clonevm $vmName --name=$vmNameClone --register
+
 
 # vboxmanage list vms
-$vms = New-Object Collections.Generic.List[VM]
-foreach ($i in 2..2) {
+$global:vms = New-Object Collections.Generic.List[VM]
+foreach ($i in 1..2) {
     $vm = [VM]::new();
     $vm.Name = "xtec-$i"
     $vm.SSH = "220$i"
@@ -97,28 +111,33 @@ foreach ($i in 2..2) {
 }
 
 
-$ifname = "vboxnet0"
-# TODO check exists
-#vboxmanage list hostonlyifs
-# VBoxManage hostonlyif create
-vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
-vboxmanage dhcpserver modify --ifname $ifname --disable
-
-foreach ($vm in $vms) {
-
-    <#
-    $vm.Stop()
-    
-    vboxmanage modifyvm $vm.Name --nic1 nat
-    vboxmanage modifyvm $vm.Name --natpf1 delete ssh
-    vboxmanage modifyvm $vm.Name --natpf1 "ssh,tcp,127.0.0.1,$($vm.SSH),,22"
-    
-    vboxmanage modifyvm $vm.Name --nic2 hostonly --hostonlyadapter2 $ifname
-    #>
-    $vm.Start()
+function Start() {
+    #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+    foreach ($vm in $vms) {
+        $vm.Start()
+    }
 }
 
-#$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+function Stop() {
+    foreach ($vm in $vms) {
+        $vm.Stop()
+    }
+}
+
+
+$cmd = $args[0]
+switch ($cmd) {
+    stop { 
+        Stop 
+    }
+    Default {
+        Start
+    }
+}
+
+
+
+
 
 
 
