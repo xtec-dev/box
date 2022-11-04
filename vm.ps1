@@ -2,9 +2,23 @@
 
 # Change default pk with user pk
 
-$global:ova = "xtec.ova"
+
 $global:ifname = "vboxnet0"
-$global:ssh_sk = "$HOME/.ssh/id_ed25519_xtec"
+
+class OVA {
+
+    static [void] Import( [string]$Name) {
+    
+        $ova = "$global:HOME/.xtec/xtec.ova"
+        if (-not(Test-Path $ova -PathType Leaf)) {
+            New-Item -Path "$global:HOME/.xtec" -ItemType Directory
+            Write-Host("Downloading xtec.ova from Google Drive")
+            DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination $ova
+        }
+
+        vboxmanage import $ova --vsys 0 --vmname $Name
+    }
+}
 
 class VM {
     [string]$Name
@@ -25,7 +39,7 @@ class VM {
         }
         else {
             Write-Host("Could not find a registered machine named '$($this.Name)'")
-            vboxmanage import xtec.ova --vsys 0 --vmname $this.Name
+            [OVA]::Import($this.Name)
         }
 
 
@@ -33,7 +47,7 @@ class VM {
         vboxmanage modifyvm $this.Name --natpf1 delete ssh
         vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
     
-        vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $global:ifname
+        #vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $global:ifname
 
 
         Write-Host(vboxmanage startvm $this.Name --type headless)
@@ -73,20 +87,38 @@ function DriveDownload {
     }
 }
 
-function SSHConfig {
-    
-    $file = $global:ssh_sk
+class SSH {
 
-    if (-not(Test-Path $file -PathType Leaf)) {
-        New-Item -Path $file -ItemType File -Force
-        # TODO if linux change permission,use newline
-        Set-Content $file -NoNewline "-----BEGIN OPENSSH PRIVATE KEY-----
+    hidden static [String] $key = "$global:HOME/.ssh/id_ed25519_xtec" 
+
+    static [void] Config() {
+    
+        $file = [SSH]::key
+
+        if (-not(Test-Path $file -PathType Leaf)) {
+            New-Item -Path $file -ItemType File -Force
+            
+            # TODO Linux Set-Content $file -NoNewline  // and  permissions
+
+            Set-Content $file "-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
 QyNTUxOQAAACBBeYoYAKtcIYloqqAe21RQoxtP/Zs1GzIN0uIz35mt2AAAAJB6j5yveo+c
 rwAAAAtzc2gtZWQyNTUxOQAAACBBeYoYAKtcIYloqqAe21RQoxtP/Zs1GzIN0uIz35mt2A
 AAAEC5SPSQvW7DimyU4MYx6SQCVAGXWCNNWmXMGEorEdt150F5ihgAq1whiWiqoB7bVFCj
 G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 -----END OPENSSH PRIVATE KEY-----"
+        }
+    }
+
+    static [void] Connect([String] $id) {
+
+        if(!$id) {
+            $id = "1"
+        }
+        
+        $file = [SSH]::key
+
+        ssh -p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
     }
 }
 
@@ -101,20 +133,14 @@ if ( $env:OS -eq 'Windows_NT') {
 }
 
 
-
-if (-not(Test-Path $ova -PathType Leaf)) {
-    Write-Host("Downloading xtec.ova from Google Drive")
-    DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination "xtec.ova"
-}
-
-SSHConfig
+[SSH]::Config()
 
 
 # TODO check exists
 #vboxmanage list hostonlyifs
 # VBoxManage hostonlyif create
-vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
-vboxmanage dhcpserver modify --ifname $ifname --disable
+#vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
+#vboxmanage dhcpserver modify --ifname $ifname --disable
 
 
 
@@ -128,14 +154,14 @@ foreach ($i in 1..1) {
 }
 
 
-function Start() {
+function BoxStart() {
     #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
     foreach ($vm in $vms) {
         $vm.Start()
     }
 }
 
-function Stop() {
+function BoxStop() {
     # TODO list all xtec machines and stop
     foreach ($vm in $vms) {
         $vm.Stop()
@@ -146,13 +172,11 @@ function Stop() {
 $cmd = $args[0]
 switch ($cmd) {
     ssh {
-        # TODO default argument 1
-        $id = $args[1]
-        ssh -p 220$id -i $global:ssh_sk  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+        [SSH]::connect($args[1])
     }
 
     start {
-        Start
+        BoxStart
     }
     status {
         $vms = vboxmanage list vms
@@ -161,7 +185,7 @@ switch ($cmd) {
         }
     }
     stop { 
-        Stop 
+        BoxStop 
     }
     Default {
         Write-Host("Usage: vm.ps1 start | stop | ssh | status")
