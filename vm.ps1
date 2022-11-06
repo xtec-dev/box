@@ -35,7 +35,8 @@ class VM {
 
         $vms = vboxmanage list vms
         if ($vms -like "*$($this.Name)*") {
-            $this.Stop()
+            # TODO 
+            #$this.Stop()
         }
         else {
             Write-Host("Could not find a registered machine named '$($this.Name)'")
@@ -118,7 +119,10 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
         
         $file = [SSH]::key
 
-        ssh -p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+        # Linux 
+        #ssh -p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+
+        Start-Process ssh "-p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
     }
 }
 
