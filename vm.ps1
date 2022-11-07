@@ -112,18 +112,16 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
         }
     }
 
-    static [void] Connect([String] $id) {
-
-        if(!$id) {
-            $id = "1"
-        }
+    static [void] Connect([VM] $vm) {
         
         $file = [SSH]::key
+        $ssh = "-p $($vm.SSH) -i $file -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
+
+        Write-Host("ssh $ssh")
+        Start-Process ssh $ssh
 
         # Linux 
-        #ssh -p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
-
-        Start-Process ssh "-p 220$id -i $file  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
+        #ssh
     }
 }
 
@@ -150,38 +148,29 @@ if ( $env:OS -eq 'Windows_NT') {
 
 
 # vboxmanage list vms
-$global:vms = New-Object Collections.Generic.List[VM]
-foreach ($i in 1..1) {
-    $vm = [VM]::new();
-    $vm.Name = "xtec-$i"
-    $vm.SSH = "220$i"
-    $vms.Add($vm)
+
+$id = $args[1]
+if(!$id) {
+    $id = "1"
 }
 
+$ids = New-Object Collections.Generic.List[String]
+$ids.Add($id)
+        #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
 
-function BoxStart() {
-    #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
-    foreach ($vm in $vms) {
-        $vm.Start()
-    }
-}
 
-function BoxStop() {
-    # TODO list all xtec machines and stop
-    foreach ($vm in $vms) {
-        $vm.Stop()
-    }
-}
-
+$vm = [VM]::new()
+$vm.Name = "xtec-$id"
+$vm.SSH = "220$id"
 
 $cmd = $args[0]
 switch ($cmd) {
     ssh {
-        [SSH]::connect($args[1])
+        [SSH]::connect($vm)
     }
 
     start {
-        BoxStart
+        $vm.Start()
     }
     status {
         $vms = vboxmanage list vms
@@ -190,10 +179,16 @@ switch ($cmd) {
         }
     }
     stop { 
-        BoxStop 
+        $vm.Stop()
     }
     Default {
-        Write-Host("Usage: vm.ps1 start | stop | ssh | status")
+        Write-Host("Usage:     vm.ps1 [command] 
+Commands:
+           start id*    i.e   start, start 1, start 1 3       
+           stop id*     i.e   stop, stop 2, stop 1 4    
+           ssh id         
+           status
+")
     }
 }
 
