@@ -16,7 +16,8 @@ class OVA {
             DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination $ova
         }
 
-        vboxmanage import $ova --vsys 0 --vmname $Name
+        Write-Host("Importing virtual machine $Name")
+        vboxmanage import $ova --vsys 0 --vmname $Name --basefolder $global:HOME/.xtec
     }
 }
 
