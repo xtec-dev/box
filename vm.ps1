@@ -1,13 +1,27 @@
 
-
-# Change default pk with user pk
-
-$global:ifname = "vboxnet0"
+# TODO Change default pk with user pk
 
 class Box {
 
     hidden static [String] $home = "$global:HOME/.xtec"
     hidden static [String] $ova = "$([Box]::home)/xtec.ova"
+
+    static [String] Adapter() {
+
+        $adapter = "VirtualBox Host-Only Ethernet Adapter"
+        #Linux "vboxnet0"
+        
+        # TODO
+        <#$list = vboxmanage list hostonlyifs
+        $name = $list[0] | Select-String '^Name:\s+(\w+)'
+        if ($list -notlike "*$adapter*") {
+            Write-Host("box: host-only not found: $adapter")
+            exit
+        }#>
+
+        return $adapter
+    }
+
 
     static [void] Import( [string] $Name) {
     
@@ -42,12 +56,6 @@ class Box {
             Write-Host("TODO wget in linux")
         }
     }
-
-    static Config() {
-        $result = vboxmanage list hostonlyifs
-        #https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-arrays?view=powershell-7.2
-        Write-Host($result)
-    }
 }
 
 class VM {
@@ -62,6 +70,8 @@ class VM {
     }
 
     [void] Start() {
+
+        [SSH]::Execute($this, "touch hello")
 
         $vms = vboxmanage list vms
         if ($vms -like "*$($this.Name)*") {
@@ -80,8 +90,9 @@ class VM {
         vboxmanage modifyvm $this.Name --nic1 nat
         vboxmanage modifyvm $this.Name --natpf1 delete ssh
         vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
-    
-        #vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $global:ifname
+
+        $adapter = [Box]::Adapter()
+        vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $adapter
 
 
         Write-Host("$($this.Name): startig machine ...")
@@ -136,14 +147,21 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 
     static [void] Connect([VM] $vm) {
         
-        $file = [SSH]::key
-        $ssh = "-p $($vm.SSH) -i $file -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
+        $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
 
         Write-Host("ssh $ssh")
         Start-Process ssh $ssh
 
         # Linux 
         #ssh
+    }
+
+    static [void] Execute([VM] $vm,[String] $cmd) {
+
+        $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1 '$cmd'"
+
+        Write-Host("ssh $ssh")
+        Start-Process ssh $ssh
     }
 }
 
@@ -159,25 +177,12 @@ if ( $env:OS -eq 'Windows_NT') {
 
 
 [SSH]::Config()
-#[Box]::Config()
 
 <#
-
-if ! VBoxManage showvminfo VMNAME --machinereadable | egrep '^VMState="poweroff"$' > /dev/null; then ...
-vboxmanage showvminfo "vmname or GUID" | findstr /c:"running (since"
-
 vboxmanage list vms --long | grep -e "Name:" -e "State:"
 vboxmanage list runningvms
-
-# TODO check exists
-#vboxmanage list hostonlyifs
-# VBoxManage hostonlyif create
 #vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
 #vboxmanage dhcpserver modify --ifname $ifname --disable
-
-
-
-# vboxmanage list vms
 #>
 
 
