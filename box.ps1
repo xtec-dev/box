@@ -1,5 +1,9 @@
 
+# TODO config memory and CPU
 # TODO Change default pk with user pk
+
+# Format: Shit + Alt + F
+
 
 class Box {
 
@@ -11,6 +15,9 @@ class Box {
         $adapter = "VirtualBox Host-Only Ethernet Adapter"
         #Linux "vboxnet0"
         
+        #vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
+        #vboxmanage dhcpserver modify --ifname $ifname --disable
+
         # TODO
         <#$list = vboxmanage list hostonlyifs
         $name = $list[0] | Select-String '^Name:\s+(\w+)'
@@ -39,7 +46,7 @@ class Box {
         }
         
         Write-Host("box: downloading xtec.ova")
-        [Box]::Download("1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ",([Box]::ova))
+        [Box]::Download("1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ", ([Box]::ova))
     }
 
     static [void] Download ( [string]$GoogleFileId, [string]$Destination) {
@@ -59,7 +66,8 @@ class Box {
 }
 
 class VM {
-    [string]$Name
+    [String]$Id
+    [String]$Name
     [String]$SSH
 
     [void] Delete() {
@@ -71,13 +79,19 @@ class VM {
 
     [void] Start() {
 
-        [SSH]::Execute($this, "touch hello")
-
         $vms = vboxmanage list vms
         if ($vms -like "*$($this.Name)*") {
             $info = VBoxManage showvminfo --machinereadable $this.Name
             if ($info -like 'VMState="running"') {
                 Write-Host("$($this.Name): machine is running")
+                [SSH]::Execute($this, "sudo hostnamectl set-hostname $($this.Name); echo '
+        network:
+          ethernets:
+            eth1:
+              addresses:
+                - 192.168.56.10$($this.id)/24
+          version: 2
+        ' | sudo tee /etc/netplan/10-box.yaml; sudo netplan apply")
                 exit
             }
         }
@@ -87,6 +101,8 @@ class VM {
         }
 
 
+        vboxmanage modifyvm $this.Name --memory 2048
+        vboxmanage modifyvm $this.Name --cpus 2
         vboxmanage modifyvm $this.Name --nic1 nat
         vboxmanage modifyvm $this.Name --natpf1 delete ssh
         vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
@@ -98,16 +114,25 @@ class VM {
         Write-Host("$($this.Name): startig machine ...")
         Write-Host(vboxmanage startvm $this.Name --type headless)
 
-        # set-hostname
-        # apply netplan
+        Write-Host("$($this.Name): waiting ssh ready ...")
+        
+        [SSH]::Execute($this, "sudo hostnamectl set-hostname $($this.Name); echo '
+        network:
+          ethernets:
+            eth1:
+              addresses:
+                - 192.168.56.10$($this.id)/24
+          version: 2
+        ' | sudo tee /etc/netplan/10-box.yaml; sudo netplan apply")
     }
 
     [void] Stop() {
 
         $vms = vboxmanage list vms
         if ($vms -notlike "*$($this.Name)*") {
-            Write-Host("$($this.Name): machine not found.")
-            exit
+            #TODO xtec-2 not found
+            #Write-Host("$($this.Name): machine not found.")
+            #exit
         }
 
         $info = VBoxManage showvminfo --machinereadable $this.Name
@@ -156,12 +181,9 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
         #ssh
     }
 
-    static [void] Execute([VM] $vm,[String] $cmd) {
+    static [void] Execute([VM] $vm, [String] $cmd) {
 
-        $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1 '$cmd'"
-
-        Write-Host("ssh $ssh")
-        Start-Process ssh $ssh
+        ssh -p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1 "$cmd"
     }
 }
 
@@ -178,38 +200,33 @@ if ( $env:OS -eq 'Windows_NT') {
 
 [SSH]::Config()
 
-<#
-vboxmanage list vms --long | grep -e "Name:" -e "State:"
-vboxmanage list runningvms
-#vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
-#vboxmanage dhcpserver modify --ifname $ifname --disable
-#>
-
 
 $id = $args[1]
-if(!$id) {
+if (!$id) {
     $id = "1"
 }
 
 $ids = New-Object Collections.Generic.List[String]
 $ids.Add($id)
-        #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+#$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
 
 
 $vm = [VM]::new()
+$vm.Id = $id
 $vm.Name = "xtec-$id"
 $vm.SSH = "220$id"
 
 $cmd = $args[0]
 switch ($cmd) {
     ssh {
-        [SSH]::connect($vm)
+        [SSH]::Connect($vm)
     }
 
     start {
         $vm.Start()
     }
-    status {
+    list {
+        # vboxmanage list vms --long | grep -e "Name:" -e "State:"
         $vms = vboxmanage list vms
         foreach ($vm in $vms) {
             Write-Host $vm
@@ -227,7 +244,7 @@ Commands:
            start id*    i.e   start, start 1, start 1 3       
            stop id*     i.e   stop, stop 2, stop 1 4    
            ssh id         
-           status
+           list
 ")
     }
 }
