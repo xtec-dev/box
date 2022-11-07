@@ -21,6 +21,14 @@ class OVA {
     }
 }
 
+class Box {
+    static Config() {
+        $result = vboxmanage list hostonlyifs
+        #https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-arrays?view=powershell-7.2
+        Write-Host($result)
+    }
+}
+
 class VM {
     [string]$Name
     [String]$SSH
@@ -36,11 +44,14 @@ class VM {
 
         $vms = vboxmanage list vms
         if ($vms -like "*$($this.Name)*") {
-            # TODO 
-            #$this.Stop()
+            $info = VBoxManage showvminfo --machinereadable $this.Name
+            if ($info -like 'VMState="running"') {
+                Write-Host("$($this.Name): machine is running")
+                exit
+            }
         }
         else {
-            Write-Host("Could not find a registered machine named '$($this.Name)'")
+            Write-Host("$($this.Name): machine it's not registered")
             [OVA]::Import($this.Name)
         }
 
@@ -52,6 +63,7 @@ class VM {
         #vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $global:ifname
 
 
+        Write-Host("$($this.Name): startig machine ...")
         Write-Host(vboxmanage startvm $this.Name --type headless)
 
         # set-hostname
@@ -59,12 +71,17 @@ class VM {
     }
 
     [void] Stop() {
-        # TODO State()
+
+        $vms = vboxmanage list vms
+        if ($vms -notlike "*$($this.Name)*") {
+            Write-Host("$($this.Name): machine not found.")
+            exit
+        }
 
         $info = VBoxManage showvminfo --machinereadable $this.Name
         while (-not($info -like 'VMState="poweroff"')) {
             vboxmanage controlvm $this.Name acpipowerbutton
-            Write-Host("Waiting for machine $($this.Name) to poweroff...")
+            Write-Host("$($this.Name): waiting to poweroff machine ...")
             Start-Sleep -Seconds 2
             $info = VBoxManage showvminfo --machinereadable $this.Name
         }
@@ -137,7 +154,15 @@ if ( $env:OS -eq 'Windows_NT') {
 
 
 [SSH]::Config()
+#[Box]::Config()
 
+<#
+
+if ! VBoxManage showvminfo VMNAME --machinereadable | egrep '^VMState="poweroff"$' > /dev/null; then ...
+vboxmanage showvminfo "vmname or GUID" | findstr /c:"running (since"
+
+vboxmanage list vms --long | grep -e "Name:" -e "State:"
+vboxmanage list runningvms
 
 # TODO check exists
 #vboxmanage list hostonlyifs
@@ -148,6 +173,8 @@ if ( $env:OS -eq 'Windows_NT') {
 
 
 # vboxmanage list vms
+#>
+
 
 $id = $args[1]
 if(!$id) {
