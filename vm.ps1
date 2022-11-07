@@ -2,26 +2,47 @@
 
 # Change default pk with user pk
 
-
 $global:ifname = "vboxnet0"
 
-class OVA {
+class Box {
 
-    static [void] Import( [string]$Name) {
+    hidden static [String] $home = "$global:HOME/.xtec"
+    hidden static [String] $ova = "$([Box]::home)/xtec.ova"
+
+    static [void] Import( [string] $Name) {
     
-        $ova = "$global:HOME/.xtec/xtec.ova"
-        if (-not(Test-Path $ova -PathType Leaf)) {
-            New-Item -Path "$global:HOME/.xtec" -ItemType Directory
-            Write-Host("Downloading xtec.ova from Google Drive")
-            DriveDownload -GoogleFileId "1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ" -Destination $ova
+        if (-not(Test-Path ([Box]::ova) -PathType Leaf)) {
+            [Box]::Update()
         }
 
-        Write-Host("Importing virtual machine $Name")
-        vboxmanage import $ova --vsys 0 --vmname $Name --basefolder $global:HOME/.xtec
+        Write-Host("box: importing virtual machine $Name")
+        vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
     }
-}
 
-class Box {
+    static [void] Update() {
+        if (!(Test-Path -PathType Container ([Box]::home))) {
+            New-Item -ItemType Directory -Path ([Box]::home) 
+        }
+        
+        Write-Host("box: downloading xtec.ova")
+        [Box]::Download("1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ",([Box]::ova))
+    }
+
+    static [void] Download ( [string]$GoogleFileId, [string]$Destination) {
+    
+        # set protocol to tls version 1.2
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+        $source = "https://drive.google.com/uc?export=download&confirm=t&id=$GoogleFileId"
+    
+        if ( $env:OS -eq 'Windows_NT') {
+            Start-BitsTransfer -Source $source -Destination $Destination
+        }
+        else {
+            Write-Host("TODO wget in linux")
+        }
+    }
+
     static Config() {
         $result = vboxmanage list hostonlyifs
         #https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-arrays?view=powershell-7.2
@@ -52,7 +73,7 @@ class VM {
         }
         else {
             Write-Host("$($this.Name): machine it's not registered")
-            [OVA]::Import($this.Name)
+            [Box]::Import($this.Name)
         }
 
 
@@ -88,23 +109,7 @@ class VM {
     }
 }
 
-function DriveDownload {
-    param(
-        [string]$GoogleFileId,
-        [string]$Destination)
 
-    # set protocol to tls version 1.2
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-    $source = "https://drive.google.com/uc?export=download&confirm=t&id=$GoogleFileId"
-
-    if ( $env:OS -eq 'Windows_NT') {
-        Start-BitsTransfer -Source $source -Destination $Destination
-    }
-    else {
-        Write-Host("TODO wget in linux")
-    }
-}
 
 class SSH {
 
@@ -207,6 +212,9 @@ switch ($cmd) {
     }
     stop { 
         $vm.Stop()
+    }
+    update {
+        [Box]::Update()
     }
     Default {
         Write-Host("Usage:     vm.ps1 [command] 
