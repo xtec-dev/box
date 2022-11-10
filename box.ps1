@@ -150,7 +150,10 @@ class VM {
 
         try {
             $vm = $global:vbox.FindMachine($($this.Name))
-            vboxmanage controlvm $this.Name acpipowerbutton
+            if (-not($vm.State -eq 1)) {
+                Write-Host("$($this.Name): waiting to poweroff machine ...")
+                vboxmanage controlvm $this.Name acpipowerbutton
+            }
         }
         catch {
             Write-Host("$($this.Name): machine it's not registered")
@@ -242,9 +245,18 @@ switch ($cmd) {
     }
 
     start {
-        #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
         foreach ($vm in $vms) {
             $vm.Start()
+        }
+    }
+    pstart {
+        #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+        Workflow StartParallel {
+            Foreach -parallel($vm in $vms) {
+                InlineScript {
+                    $vm.Start()
+                }
+            }
         }
     }
     list {
@@ -253,6 +265,15 @@ switch ($cmd) {
     stop { 
         foreach ($vm in $vms) {
             $vm.Stop()
+        }
+    }
+    pstop {
+        Workflow StopParallel {
+            Foreach -parallel($vm in $vms) {
+                InlineScript {
+                    $vm.Stop()
+                }
+            }
         }
     }
     update {
