@@ -1,3 +1,7 @@
+param($cmd = "help")
+
+Write-Verbose "Creating the VirtualBox COM object"
+$global:vbox = New-Object -ComObject "VirtualBox.VirtualBox"
 
 # TODO config memory and CPU
 # TODO Change default pk with user pk
@@ -40,6 +44,27 @@ class Box {
         vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
     }
 
+    static [void] List() {
+        $vms = $global:vbox.Machines
+        foreach ($vm in $vms) {
+            if ($vm.Name -like 'xtec-*') {
+                $state = $vm.State
+                $state = switch ($state) {
+                    1 { "stopped" }
+                    2 { "saved" }
+                    5 { "running" }
+                    9 { "starting" }
+                    10 { "stopping" }
+                    11 { "restoring" }
+                    Default { $state }
+                }
+
+                Write-Host("$($vm.Name): $state")
+            }
+        }
+            
+    }
+
     static [void] Update() {
         if (!(Test-Path -PathType Container ([Box]::home))) {
             New-Item -ItemType Directory -Path ([Box]::home) 
@@ -79,43 +104,38 @@ class VM {
 
     [void] Start() {
 
-        $vms = vboxmanage list vms
-        if ($vms -like "*$($this.Name)*") {
-            $info = VBoxManage showvminfo --machinereadable $this.Name
-            if ($info -like 'VMState="running"') {
-                Write-Host("$($this.Name): machine is running")
-                [SSH]::Execute($this, "sudo hostnamectl set-hostname $($this.Name); echo '
-        network:
-          ethernets:
-            eth1:
-              addresses:
-                - 192.168.56.10$($this.id)/24
-          version: 2
-        ' | sudo tee /etc/netplan/10-box.yaml; sudo netplan apply")
-                exit
-            }
+        $vm = $null
+        try {
+            $vm = $global:vbox.FindMachine($($this.Name))
         }
-        else {
+        catch {
             Write-Host("$($this.Name): machine it's not registered")
             [Box]::Import($this.Name)
+            $vm = $global:vbox.FindMachine($($this.Name))
+        }
+        
+
+        # Stopped                
+        if ($vm.State -eq 1) {
+
+            vboxmanage modifyvm $this.Name --memory 4096
+            vboxmanage modifyvm $this.Name --cpus 2
+            vboxmanage modifyvm $this.Name --nic1 nat
+            vboxmanage modifyvm $this.Name --natpf1 delete ssh
+            vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
+
+            $adapter = [Box]::Adapter()
+            vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $adapter
         }
 
 
-        vboxmanage modifyvm $this.Name --memory 2048
-        vboxmanage modifyvm $this.Name --cpus 2
-        vboxmanage modifyvm $this.Name --nic1 nat
-        vboxmanage modifyvm $this.Name --natpf1 delete ssh
-        vboxmanage modifyvm $this.Name --natpf1 "ssh,tcp,127.0.0.1,$($this.SSH),,22"
-
-        $adapter = [Box]::Adapter()
-        vboxmanage modifyvm $this.Name --nic2 hostonly --hostonlyadapter2 $adapter
-
-
-        Write-Host("$($this.Name): startig machine ...")
-        Write-Host(vboxmanage startvm $this.Name --type headless)
-
+        # Running
+        if (-not($vm.State -eq 5)) {
+            Write-Host("$($this.Name): starting machine ...")
+            Write-Host(vboxmanage startvm $this.Name --type headless)
+        }    
+                
         Write-Host("$($this.Name): waiting ssh ready ...")
-        
         [SSH]::Execute($this, "sudo hostnamectl set-hostname $($this.Name); echo '
         network:
           ethernets:
@@ -128,13 +148,15 @@ class VM {
 
     [void] Stop() {
 
-        $vms = vboxmanage list vms
-        if ($vms -notlike "*$($this.Name)*") {
-            #TODO xtec-2 not found
-            #Write-Host("$($this.Name): machine not found.")
-            #exit
+        try {
+            $vm = $global:vbox.FindMachine($($this.Name))
+            vboxmanage controlvm $this.Name acpipowerbutton
+        }
+        catch {
+            Write-Host("$($this.Name): machine it's not registered")
         }
 
+        <#
         $info = VBoxManage showvminfo --machinereadable $this.Name
         while (-not($info -like 'VMState="poweroff"')) {
             vboxmanage controlvm $this.Name acpipowerbutton
@@ -142,6 +164,7 @@ class VM {
             Start-Sleep -Seconds 2
             $info = VBoxManage showvminfo --machinereadable $this.Name
         }
+        #>
     }
 }
 
@@ -157,8 +180,6 @@ class SSH {
 
         if (-not(Test-Path $file -PathType Leaf)) {
             New-Item -Path $file -ItemType File -Force
-            
-            # TODO Linux Set-Content $file -NoNewline  // and  permissions
 
             Set-Content $file "-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
@@ -176,9 +197,6 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 
         Write-Host("ssh $ssh")
         Start-Process ssh $ssh
-
-        # Linux 
-        #ssh
     }
 
     static [void] Execute([VM] $vm, [String] $cmd) {
@@ -191,59 +209,65 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 
 ##### MAIN #####
 
-if ( $env:OS -eq 'Windows_NT') {
-    if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
-        $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
-    }
+
+if ($null -eq (get-command VBoxManage.exe -errorAction silentlyContinue) ) {
+    $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
 }
 
 
 [SSH]::Config()
 
 
-$id = $args[1]
-if (!$id) {
-    $id = "1"
+$vms = New-Object Collections.Generic.List[VM]
+foreach ($id in $args) {
+    $vm = [VM]::new()
+    $vm.Id = $id
+    $vm.Name = "xtec-$id"
+    $vm.SSH = "220$id"
+    $vms.Add($vm)
 }
 
-$ids = New-Object Collections.Generic.List[String]
-$ids.Add($id)
-#$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
+if ($vms.count -eq 0) {
+    $id = 1
+    $vm = [VM]::new()
+    $vm.Id = $id
+    $vm.Name = "xtec-$id"
+    $vm.SSH = "220$id"
+    $vms.Add($vm)
+}
 
-
-$vm = [VM]::new()
-$vm.Id = $id
-$vm.Name = "xtec-$id"
-$vm.SSH = "220$id"
-
-$cmd = $args[0]
 switch ($cmd) {
     ssh {
         [SSH]::Connect($vm)
     }
 
     start {
-        $vm.Start()
-    }
-    list {
-        # vboxmanage list vms --long | grep -e "Name:" -e "State:"
-        $vms = vboxmanage list vms
+        #$vms | Foreach-Object -ThrottleLimit 3 -Parallel { $_}
         foreach ($vm in $vms) {
-            Write-Host $vm
+            $vm.Start()
         }
     }
+    list {
+        [Box]::List()
+    }
     stop { 
-        $vm.Stop()
+        foreach ($vm in $vms) {
+            $vm.Stop()
+        }
     }
     update {
         [Box]::Update()
     }
+    install {
+        Copy-Item box.ps1 "C:\Users\david\AppData\Local\Microsoft\Windows"
+    }
+
     Default {
-        Write-Host("Usage:     vm.ps1 [command] 
+        Write-Host("Usage:     box.ps1 [command] 
 Commands:
-           start id*    i.e   start, start 1, start 1 3       
-           stop id*     i.e   stop, stop 2, stop 1 4    
-           ssh id         
+           start id*  default 1       
+           stop id*   default 1
+           ssh id   1       
            list
 ")
     }
