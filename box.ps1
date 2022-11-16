@@ -206,6 +206,12 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 
         ssh -p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1 "$cmd"
     }
+
+    static [void] Hetzner([String] $IP) {
+        $ssh = "-i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IP"
+        Write-Host("ssh $ssh")
+        Start-Process ssh $ssh 
+    }
 }
 
 
@@ -240,6 +246,12 @@ if ($vms.count -eq 0) {
 }
 
 switch ($cmd) {
+
+    hetzner {
+        $IP = $args[0]
+        [SSH]::Hetzner($IP)
+    }
+
     ssh {
         [SSH]::Connect($vm)
     }
