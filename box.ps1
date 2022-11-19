@@ -71,15 +71,13 @@ class Box {
         }
         
         Write-Host("box: downloading xtec.ova")
-        [Box]::Download("1UxNLsSvv7eo-M6MmAgadn7m14wEvrMmZ", ([Box]::ova))
+        [Box]::Download("https://xtec.optersoft.com/xtec.ova", ([Box]::ova))
     }
 
-    static [void] Download ( [string]$GoogleFileId, [string]$Destination) {
+    static [void] Download ( [string]$source, [string]$Destination) {
     
-        # set protocol to tls version 1.2
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
-        $source = "https://drive.google.com/uc?export=download&confirm=t&id=$GoogleFileId"
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls13
+
     
         if ( $env:OS -eq 'Windows_NT') {
             Start-BitsTransfer -Source $source -Destination $Destination
