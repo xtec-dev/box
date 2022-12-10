@@ -1,0 +1,11 @@
+[package]
+name = "xtec-box"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "box"
+path = "src/box.rs"
+
+[dependencies]
+hcloud = { version = "*", default-features = false, features = ["rustls-tls"] }
