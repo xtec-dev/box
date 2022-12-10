@@ -1,5 +1,10 @@
-mod hetzner
+mod google;
+mod hetzner;
 
-fn main() {
-    println!("Hello, world!");
+#[tokio::main]
+async fn main() {
+    if true {
+        let result = hetzner::config().await;
+        println!("{:?}", result)
+    }
 }
