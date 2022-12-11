@@ -1,39 +1,50 @@
 use anyhow::Result;
-use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
+use std::{cmp::min, path::Path};
 
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 
+pub async fn start(_id: u16) -> Result<()> {
+    import("xtec-1").await
+}
+
+async fn import(_name: &str) -> Result<()> {
+    let mut path = home::home_dir().expect("Home dir");
+    path = path.join(".xtec");
+    std::fs::create_dir_all(&path)?;
+
+    path = path.join("xtec.ova");
+    if !path.exists() {
+        download_file(&Client::new(), "https://xtec.optersoft.com/xtec.ova", &path)
+            .await
+            .unwrap();
+    }
+
+    let _vm = Machine {};
+
+    Ok(())
+}
+
 pub struct Machine {}
 
 impl Machine {
-    pub fn start() -> Result<()> {
+    pub fn _start() -> Result<()> {
         Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
         Ok(())
     }
 }
 
-pub fn list_vms() -> Result<Vec<Machine>> {
-    let list = Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
+pub fn _list_vms() -> Result<Vec<Machine>> {
+    let _list = Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
 
     Ok(Vec::new())
 }
 
-pub async fn ova_import() {
-    download_file(
-        &Client::new(),
-        "https://xtec.optersoft.com/xtec.ova",
-        "xtec.ova",
-    )
-    .await
-    .unwrap();
-}
-
-async fn download_file(client: &Client, url: &str, path: &str) -> Result<(), String> {
+async fn download_file(client: &Client, url: &str, path: &Path) -> Result<(), String> {
     // Reqwest setup
     let res = client
         .get(url)
@@ -52,7 +63,7 @@ async fn download_file(client: &Client, url: &str, path: &str) -> Result<(), Str
     pb.set_message(&format!("Downloading {}", url));
 
     // download chunks
-    let mut file = File::create(path).or(Err(format!("Failed to create file '{}'", path)))?;
+    let mut file = File::create(path).or(Err(format!("Failed to create file '{:?}'", path)))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
 
@@ -65,6 +76,6 @@ async fn download_file(client: &Client, url: &str, path: &str) -> Result<(), Str
         pb.set_position(new);
     }
 
-    pb.finish_with_message(&format!("Downloaded {} to {}", url, path));
+    pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
     return Ok(());
 }

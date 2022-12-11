@@ -4,7 +4,7 @@ mod vbox;
 
 #[tokio::main]
 async fn main() {
-    vbox::ova_import().await;
+    vbox::start(1).await.expect("machine");
 
     if true {
         let result = hetzner::config().await;
