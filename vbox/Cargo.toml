@@ -1,0 +1,13 @@
+[package]
+name = "vbox"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+futures-util = "0.3.14"
+home = "0.5"
+indicatif = "0.15"
+reqwest = { version = "0.11.3", features = ["stream"] }
+tokio = { version = "1.11", features = ["macros", "rt-multi-thread"] }
+vboxhelper = "0.3"

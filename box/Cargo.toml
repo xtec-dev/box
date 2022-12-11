@@ -1,0 +1,14 @@
+[package]
+name = "xtec-box"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "box"
+path = "src/box.rs"
+
+[dependencies]
+anyhow = "1.0"
+hcloud = { version = "*", default-features = false, features = ["rustls-tls"] }
+tokio = { version = "1.11", features = ["macros", "rt-multi-thread"] }
+vbox = { path = "../vbox" }

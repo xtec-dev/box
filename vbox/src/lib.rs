@@ -104,5 +104,45 @@ impl Machine {
 
 #[cfg(test)]
 mod tests {
+
     // "\"xtec-1\" {9faa6303-ad35-4b75-b678-912ceb3c2bce}\n",
+
+    use std::collections::HashSet;
+
+    use vboxhelper;
+
+    fn test() {
+        // Get list of all known virtual machines in system
+        let lst = vboxhelper::get_vm_list().expect("Unable to get VM list");
+
+        // Get a HashSet containing all known _running_ virtual machines
+        let running = {
+            let mut set = HashSet::new();
+            for (_, uuid) in vboxhelper::get_running_vms_list().expect("Unable to get VM list") {
+                set.insert(uuid);
+            }
+
+            set
+        };
+
+        // Find the longest virtual machine name, to make make output visually
+        // stunning.
+        let mut max_len = 0;
+        for (nm, _) in &lst {
+            if nm.len() > max_len {
+                max_len = nm.len();
+            }
+        }
+
+        // Display a list of all virtual machines, and marking the running ones.
+        for (nm, uuid) in &lst {
+            let runstate = if running.contains(&uuid) {
+                " [running]"
+            } else {
+                ""
+            };
+
+            println!("{:width$}  {}{}", nm, uuid, runstate, width = max_len);
+        }
+    }
 }

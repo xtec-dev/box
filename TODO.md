@@ -5,6 +5,9 @@ https://4sysops.com/archives/managing-virtualbox-vms-with-powershell/
 New small ova
 Change default pk with user pk
 
+
+https://docs.rs/vboxhelper/latest/vboxhelper/
+
 # Hetzner
 
 ssh -i $HOME/.ssh/id_ed25519_xtec -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@
