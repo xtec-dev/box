@@ -8,38 +8,49 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 
-pub async fn start(_id: u16) -> Result<()> {
-    import("xtec-1").await
+pub async fn start(_id: u16) -> Result<Machine> {
+    let vm = Machine {
+        name: String::from("xtec-1"),
+    };
+
+    let _vms = list_vms();
+
+    if false {
+        import(&vm).await?;
+    }
+    Ok(vm)
 }
 
-async fn import(_name: &str) -> Result<()> {
+async fn import(vm: &Machine) -> Result<()> {
     let mut path = home::home_dir().expect("Home dir");
     path = path.join(".xtec");
     std::fs::create_dir_all(&path)?;
 
-    path = path.join("xtec.ova");
-    if !path.exists() {
+    let ova_path = path.join("xtec.ova");
+    if !ova_path.exists() {
         download_file(&Client::new(), "https://xtec.optersoft.com/xtec.ova", &path)
             .await
             .unwrap();
     }
 
-    let _vm = Machine {};
+    println!("box: importing virtual machine {}", vm.name);
+    let output = Command::new("vboxmanage")
+        .arg("import")
+        .arg(ova_path)
+        .args(["--vsys", "0", "--vmname", &vm.name, "--basefolder"])
+        .arg(path)
+        .spawn()?;
+    println!("{:?}", output);
+
+    //vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
 
     Ok(())
 }
 
-pub struct Machine {}
+pub fn list_vms() -> Result<Vec<Machine>> {
+    let vms = Command::new("vboxmanage").arg("list").arg("vms").output()?;
 
-impl Machine {
-    pub fn _start() -> Result<()> {
-        Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
-        Ok(())
-    }
-}
-
-pub fn _list_vms() -> Result<Vec<Machine>> {
-    let _list = Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
+    println!("{:#?}", vms);
 
     Ok(Vec::new())
 }
@@ -78,4 +89,20 @@ async fn download_file(client: &Client, url: &str, path: &Path) -> Result<(), St
 
     pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
     return Ok(());
+}
+
+pub struct Machine {
+    name: String,
+}
+
+impl Machine {
+    pub fn _start() -> Result<()> {
+        Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // "\"xtec-1\" {9faa6303-ad35-4b75-b678-912ceb3c2bce}\n",
 }

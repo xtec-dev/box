@@ -20,16 +20,5 @@ alumne ALL=(ALL) NOPASSWD:ALL
 
 https://github.com/ruzickap/packer-templates/
 
-hetzner
 
-hetzner {
-    $IP = $args[0]
-    Write-Host($args)
-    [SSH]::Hetzner($IP)
-}
-
-static [void] Hetzner([String] $IP) {
-    $ssh = ssh -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$IP
-    Write-Host("ssh $ssh")
-    Start-Process ssh $ssh 
-}
+https://github.com/magiclen/execute/blob/master/execute/README.md
