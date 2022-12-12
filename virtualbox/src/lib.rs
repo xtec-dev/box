@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
@@ -9,15 +9,18 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 
 pub async fn start(_id: u16) -> Result<Machine> {
-    let vm = Machine {
-        name: String::from("xtec-1"),
+   
+    let name=  String::from("xtec-1");
+
+    let vm:Machine = match list_vms()?.iter().find(|&vm| vm.name == name ) {
+        Some(vm) => vm.clone(),
+        None => {
+            let vm = Machine { name };
+            import(&vm).await?;
+            vm
+        }
     };
 
-    let _vms = list_vms();
-
-    if false {
-        import(&vm).await?;
-    }
     Ok(vm)
 }
 
@@ -28,9 +31,12 @@ async fn import(vm: &Machine) -> Result<()> {
 
     let ova_path = path.join("xtec.ova");
     if !ova_path.exists() {
-        download_file(&Client::new(), "https://xtec.optersoft.com/xtec.ova", &path)
-            .await
-            .unwrap();
+        download_file(
+            &Client::new(),
+            "https://xtec.optersoft.com/xtec.ova",
+            &ova_path,
+        )
+        .await?;
     }
 
     println!("box: importing virtual machine {}", vm.name);
@@ -43,55 +49,20 @@ async fn import(vm: &Machine) -> Result<()> {
     println!("{:?}", output);
 
     //vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
+    
 
     Ok(())
 }
 
 pub fn list_vms() -> Result<Vec<Machine>> {
-    let vms = Command::new("vboxmanage").arg("list").arg("vms").output()?;
+    let list = vboxhelper::get_vm_list()?;
+    let vms: Vec<Machine> = list
+        .iter()
+        .map(|(name, _)| Machine { name: name.clone() })
+        .collect();
+    Ok(vms)
 
-    println!("{:#?}", vms);
-
-    Ok(Vec::new())
-}
-
-async fn download_file(client: &Client, url: &str, path: &Path) -> Result<(), String> {
-    // Reqwest setup
-    let res = client
-        .get(url)
-        .send()
-        .await
-        .or(Err(format!("Failed to GET from '{}'", &url)))?;
-    let total_size = res
-        .content_length()
-        .ok_or(format!("Failed to get content length from '{}'", &url))?;
-
-    // Indicatif setup
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-        .progress_chars("#>-"));
-    pb.set_message(&format!("Downloading {}", url));
-
-    // download chunks
-    let mut file = File::create(path).or(Err(format!("Failed to create file '{:?}'", path)))?;
-    let mut downloaded: u64 = 0;
-    let mut stream = res.bytes_stream();
-
-    while let Some(item) = stream.next().await {
-        let chunk = item.or(Err(format!("Error while downloading file")))?;
-        file.write_all(&chunk)
-            .or(Err(format!("Error while writing to file")))?;
-        let new = min(downloaded + (chunk.len() as u64), total_size);
-        downloaded = new;
-        pb.set_position(new);
-    }
-
-    pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
-    return Ok(());
-}
-
-/*
+    /*
 def read_vms
           results = {}
           execute("list", "vms", retryable: true).split("\n").each do |line|
@@ -102,9 +73,49 @@ def read_vms
 
           results
         end*/
-        
+}
+
+// TODO check file exists
+async fn download_file(client: &Client, url: &str, path: &Path) -> Result<()> {
+    // Reqwest setup
+    let res = client
+        .get(url)
+        .send()
+        .await
+        .with_context(|| format!("Failed to GET from '{}'", &url))?;
+    let total_size = res
+        .content_length()
+        .with_context(|| format!("Failed to get content length from '{}'", &url))?;
+
+    // Indicatif setup
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+        .progress_chars("#>-"));
+    pb.set_message(&format!("Downloading {}", url));
+
+    // download chunks
+    let mut file =
+        File::create(path).with_context(|| (format!("Failed to create file '{:?}'", path)))?;
+    let mut downloaded: u64 = 0;
+    let mut stream = res.bytes_stream();
+
+    while let Some(item) = stream.next().await {
+        let chunk = item.context("Error while downloading file")?;
+        file.write_all(&chunk)
+            .context("Error while writing to file")?;
+        let new = min(downloaded + (chunk.len() as u64), total_size);
+        downloaded = new;
+        pb.set_position(new);
+    }
+
+    pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
+    return Ok(());
+}
+
+#[derive(Clone)]
 pub struct Machine {
-    name: String,
+    pub name: String,
 }
 
 impl Machine {

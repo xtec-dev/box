@@ -4,7 +4,9 @@
 
 
 
+## Windows
 
+$env:RUST_BACKTRACE=1
 
 In Visual Studio Code you can easily do this.
 
