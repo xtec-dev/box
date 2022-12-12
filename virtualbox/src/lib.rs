@@ -8,9 +8,11 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::Client;
 
+mod manage;
+
 pub async fn start(_id: u16) -> Result<Machine> {
    
-    let name=  String::from("xtec-1");
+    let name=  String::from("xtec-3");
 
     let vm:Machine = match list_vms()?.iter().find(|&vm| vm.name == name ) {
         Some(vm) => vm.clone(),
@@ -40,7 +42,7 @@ async fn import(vm: &Machine) -> Result<()> {
     }
 
     println!("box: importing virtual machine {}", vm.name);
-    let output = Command::new("vboxmanage")
+    let output = Command::new(manage::get_cmd())
         .arg("import")
         .arg(ova_path)
         .args(["--vsys", "0", "--vmname", &vm.name, "--basefolder"])

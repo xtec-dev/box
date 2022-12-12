@@ -1060,6 +1060,7 @@ dependencies = [
  "futures-util",
  "home",
  "indicatif",
+ "once_cell",
  "reqwest",
  "tokio",
  "vboxhelper",

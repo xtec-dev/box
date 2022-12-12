@@ -7,7 +7,7 @@ mod hetzner;
 async fn main() {
     virtualbox::start(1).await.expect("machine");
 
-    if true {
+    if false {
         let result = hetzner::config().await;
         println!("{:?}", result)
     }
