@@ -1,2 +1,2 @@
 [workspace]
-members = ["box", "vbox"]
+members = ["box", "virtualbox"]

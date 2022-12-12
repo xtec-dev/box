@@ -1030,19 +1030,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 
 [[package]]
-name = "vbox"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "futures-util",
- "home",
- "indicatif",
- "reqwest",
- "tokio",
- "vboxhelper",
-]
-
-[[package]]
 name = "vboxhelper"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1064,6 +1051,19 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "virtualbox"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "home",
+ "indicatif",
+ "reqwest",
+ "tokio",
+ "vboxhelper",
+]
 
 [[package]]
 name = "want"
@@ -1314,5 +1314,5 @@ dependencies = [
  "anyhow",
  "hcloud",
  "tokio",
- "vbox",
+ "virtualbox",
 ]

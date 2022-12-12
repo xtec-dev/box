@@ -91,6 +91,18 @@ async fn download_file(client: &Client, url: &str, path: &Path) -> Result<(), St
     return Ok(());
 }
 
+/*
+def read_vms
+          results = {}
+          execute("list", "vms", retryable: true).split("\n").each do |line|
+            if line =~ /^"(.+?)" \{(.+?)\}$/
+              results[$1.to_s] = $2.to_s
+            end
+          end
+
+          results
+        end*/
+        
 pub struct Machine {
     name: String,
 }
