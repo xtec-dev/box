@@ -10,8 +10,8 @@ use reqwest::Client;
 
 mod manage;
 
-pub async fn start(_id: u8) -> Result<Machine> {
-    let name = String::from("xtec-3");
+pub async fn start(id: u16) -> Result<Machine> {
+    let name = format!("xtec-{}", id);
 
     let vm: Machine = match list_vms()?.iter().find(|&vm| vm.name == name) {
         Some(vm) => vm.clone(),

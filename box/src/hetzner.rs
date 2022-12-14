@@ -2,7 +2,7 @@ use anyhow::Result;
 use hcloud::apis::configuration::Configuration;
 use hcloud::apis::servers_api;
 
-pub async fn config() -> Result<()> {
+pub async fn _config() -> Result<()> {
     let mut configuration = Configuration::new();
     configuration.bearer_access_token = Some("YOUR_HCLOUD_API_TOKEN".to_string());
 

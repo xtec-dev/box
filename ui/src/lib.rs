@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::io::stdout;
 use std::sync::{Arc, Mutex};
-use tui::{backend::CrosstermBackend, Terminal};
+use tui::backend::CrosstermBackend;
 
 pub struct App {}
 
