@@ -10,11 +10,10 @@ use reqwest::Client;
 
 mod manage;
 
-pub async fn start(_id: u16) -> Result<Machine> {
-   
-    let name=  String::from("xtec-3");
+pub async fn start(_id: u8) -> Result<Machine> {
+    let name = String::from("xtec-3");
 
-    let vm:Machine = match list_vms()?.iter().find(|&vm| vm.name == name ) {
+    let vm: Machine = match list_vms()?.iter().find(|&vm| vm.name == name) {
         Some(vm) => vm.clone(),
         None => {
             let vm = Machine { name };
@@ -51,7 +50,6 @@ async fn import(vm: &Machine) -> Result<()> {
     println!("{:?}", output);
 
     //vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
-    
 
     Ok(())
 }
@@ -65,16 +63,16 @@ pub fn list_vms() -> Result<Vec<Machine>> {
     Ok(vms)
 
     /*
-def read_vms
-          results = {}
-          execute("list", "vms", retryable: true).split("\n").each do |line|
-            if line =~ /^"(.+?)" \{(.+?)\}$/
-              results[$1.to_s] = $2.to_s
-            end
-          end
+    def read_vms
+              results = {}
+              execute("list", "vms", retryable: true).split("\n").each do |line|
+                if line =~ /^"(.+?)" \{(.+?)\}$/
+                  results[$1.to_s] = $2.to_s
+                end
+              end
 
-          results
-        end*/
+              results
+            end*/
 }
 
 // TODO check file exists
