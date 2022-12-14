@@ -17,9 +17,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Lists all virtual machines currently registered with VirtualBox.
+    List {},
+
+    /// Start a virtual machine
     Start {
         /// Virtual machine id, from 1 to 9
-        #[arg(default_value_t = 1,value_parser = id_in_range)]
+        #[arg(value_parser = id_in_range)]
         id: u16,
     },
 }
@@ -35,9 +39,15 @@ fn main() {
                     Err(e) => return println!("could not start vm, reason: {}", e),
                 };
             });
-
-            //
-            println!("start {:?}", id)
+        }
+        Some(Commands::List {}) => {
+            let rt = Runtime::new().expect("tokio runtime can be initialized");
+            rt.block_on(async move {
+                match virtualbox::list() {
+                    Ok(()) => (),
+                    Err(e) => return println!("could not list vms, reason: {}", e),
+                };
+            });
         }
         None => {}
     }

@@ -10,6 +10,14 @@ use reqwest::Client;
 
 mod manage;
 
+pub fn list() -> Result<()> {
+    let vms = list_vms()?;
+    for vm in vms {
+        println!("{}", vm.name)
+    }
+    Ok(())
+}
+
 pub async fn start(id: u16) -> Result<Machine> {
     let name = format!("xtec-{}", id);
 
