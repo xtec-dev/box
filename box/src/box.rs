@@ -17,11 +17,18 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Lists all virtual machines currently registered with VirtualBox.
+    /// Lists all xtec virtual machines currently registered with VirtualBox.
     List {},
 
     /// Start a virtual machine
     Start {
+        /// Virtual machine id, from 1 to 9
+        #[arg(value_parser = id_in_range)]
+        id: u16,
+    },
+
+    /// Stop a virtual machine
+    Stop {
         /// Virtual machine id, from 1 to 9
         #[arg(value_parser = id_in_range)]
         id: u16,
@@ -31,21 +38,30 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
     match &cli.command {
-        Some(Commands::Start { id }) => {
-            let rt = Runtime::new().expect("tokio runtime can be initialized");
-            rt.block_on(async move {
-                match virtualbox::start(*id).await {
-                    Ok(v) => v,
-                    Err(e) => return println!("could not start vm, reason: {}", e),
-                };
-            });
-        }
         Some(Commands::List {}) => {
             let rt = Runtime::new().expect("tokio runtime can be initialized");
             rt.block_on(async move {
                 match virtualbox::list() {
                     Ok(()) => (),
                     Err(e) => return println!("could not list vms, reason: {}", e),
+                };
+            });
+        }
+        Some(Commands::Start { id }) => {
+            let rt = Runtime::new().expect("tokio runtime can be initialized");
+            rt.block_on(async move {
+                match virtualbox::start(*id).await {
+                    Ok(v) => v,
+                    Err(e) => return println!("could not start vm {}, reason: {}", id, e),
+                };
+            });
+        }
+        Some(Commands::Stop { id }) => {
+            let rt = Runtime::new().expect("tokio runtime can be initialized");
+            rt.block_on(async move {
+                match virtualbox::stop(*id).await {
+                    Ok(v) => v,
+                    Err(e) => return println!("could not stop vm {}, reason: {}", id, e),
                 };
             });
         }

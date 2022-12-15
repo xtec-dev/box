@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::Write;
 use std::process::Command;
 use std::{cmp::min, path::Path};
+use vboxhelper::{RunContext, Shutdown, VmId};
 
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -13,7 +14,18 @@ mod manage;
 pub fn list() -> Result<()> {
     let vms = list_vms()?;
     for vm in vms {
-        println!("{}", vm.name)
+        let info = vboxhelper::get_vm_info(&VmId::Name(vm.name.clone()))?;
+
+        let state = match info.state {
+            vboxhelper::VmState::Unknown => "",
+            vboxhelper::VmState::PowerOff => "poweroff",
+            vboxhelper::VmState::Starting => "starting",
+            vboxhelper::VmState::Running => "running",
+            vboxhelper::VmState::Paused => "paused",
+            vboxhelper::VmState::Stopping => "stopping",
+        };
+
+        println!("{} {:?}", vm.name, state)
     }
     Ok(())
 }
@@ -24,13 +36,25 @@ pub async fn start(id: u16) -> Result<Machine> {
     let vm: Machine = match list_vms()?.iter().find(|&vm| vm.name == name) {
         Some(vm) => vm.clone(),
         None => {
-            let vm = Machine { name };
+            let vm = Machine { name: name.clone() };
             import(&vm).await?;
             vm
         }
     };
 
+    println!("Starting vm {}", name);
+    vboxhelper::controlvm::start(
+        &VmId::Name(name.clone()),
+        RunContext::Headless(vboxhelper::Headless::Blocking),
+    )?;
+
     Ok(vm)
+}
+
+pub async fn stop(id: u16) -> Result<()> {
+    let name = format!("xtec-{}", id);
+    vboxhelper::controlvm::shutdown(&VmId::Name(name), Shutdown::AcpiPowerOff)?;
+    Ok(())
 }
 
 async fn import(vm: &Machine) -> Result<()> {
