@@ -41,17 +41,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
         Some(Commands::List {}) => list(),
-        Some(Commands::Start { id }) => {
-            let rt = Runtime::new().expect("tokio runtime can be initialized");
-            rt.block_on(async move {
-                let machine = Machine::new(*id);
-                match machine.start().await {
-                    Ok(v) => v,
-                    Err(e) => return println!("could not start vm {}, reason: {}", id, e),
-                };
-            });
-            Ok(())
-        }
+        Some(Commands::Start { id }) => start(*id),
         Some(Commands::Stop { id }) => {
             let rt = Runtime::new().expect("tokio runtime can be initialized");
             rt.block_on(async move {
@@ -70,9 +60,59 @@ fn list() -> Result<()> {
     let vms = virtualbox::list_vms()?;
     for vm in vms {
         let info = vm.info()?;
-        let state = info.get_state()?;
-        println!("{} {:?}", vm.name, state)
+        match info {
+            None => println!("{}", vm.name),
+            Some(info) => println!("{} {:?}", vm.name, info.get_state()),
+        }
     }
+    Ok(())
+
+    /*
+
+     // Get list of all known virtual machines in system
+        let lst = vboxhelper::get_vm_list().expect("Unable to get VM list");
+
+        // Get a HashSet containing all known _running_ virtual machines
+        let running = {
+            let mut set = HashSet::new();
+            for (_, uuid) in vboxhelper::get_running_vms_list().expect("Unable to get VM list") {
+                set.insert(uuid);
+            }
+
+            set
+        };
+
+        // Find the longest virtual machine name, to make make output visually
+        // stunning.
+        let mut max_len = 0;
+        for (nm, _) in &lst {
+            if nm.len() > max_len {
+                max_len = nm.len();
+            }
+        }
+
+        // Display a list of all virtual machines, and marking the running ones.
+        for (nm, uuid) in &lst {
+            let runstate = if running.contains(&uuid) {
+                " [running]"
+            } else {
+                ""
+            };
+
+            println!("{:width$}  {}{}", nm, uuid, runstate, width = max_len);
+        }
+    */
+}
+
+fn start(id: u16) -> Result<()> {
+    let name = format!("xtec-{}", id);
+    let machine = Machine::new(name);
+    let rt = Runtime::new()?;
+    rt.block_on(async move {
+        if let Err(err) = machine.start().await {
+            println!("{}: {}", machine.name, err);
+        }
+    });
     Ok(())
 }
 
