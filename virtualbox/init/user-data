@@ -1,0 +1,17 @@
+#cloud-config
+users:
+  - name: alumne
+    groups: sudo
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    plain_text_passwd: password
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEF5ihgAq1whiWiqoB7bVFCjG0/9mzUbMg3S4jPfma3Y alumne
+
+# NOTE: Cloud-init applies network settings on every boot by default. To retain network settings from first boot, add the following ‘write_files’ section:
+write_files:
+  - path: /etc/cloud/cloud.cfg.d/80_disable_network_after_firstboot.cfg
+    content: |
+      # Disable network configuration after first boot
+      network:
+        config: disabled

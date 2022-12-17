@@ -12,6 +12,7 @@ use regex::Regex;
 use reqwest::Client;
 
 mod manage;
+mod ubuntu;
 
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
