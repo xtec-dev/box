@@ -3,8 +3,10 @@ mod hetzner;
 
 use std::ops::RangeInclusive;
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tokio::runtime::Runtime;
+use virtualbox::Machine;
 
 #[derive(Parser)]
 #[command(name = "box")]
@@ -17,7 +19,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Lists all xtec virtual machines currently registered with VirtualBox.
+    /// Lists all virtual machines currently registered with VirtualBox.
     List {},
 
     /// Start a virtual machine
@@ -35,26 +37,20 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Some(Commands::List {}) => {
-            let rt = Runtime::new().expect("tokio runtime can be initialized");
-            rt.block_on(async move {
-                match virtualbox::list() {
-                    Ok(()) => (),
-                    Err(e) => return println!("could not list vms, reason: {}", e),
-                };
-            });
-        }
+        Some(Commands::List {}) => list(),
         Some(Commands::Start { id }) => {
             let rt = Runtime::new().expect("tokio runtime can be initialized");
             rt.block_on(async move {
-                match virtualbox::start(*id).await {
+                let machine = Machine::new(*id);
+                match machine.start().await {
                     Ok(v) => v,
                     Err(e) => return println!("could not start vm {}, reason: {}", id, e),
                 };
             });
+            Ok(())
         }
         Some(Commands::Stop { id }) => {
             let rt = Runtime::new().expect("tokio runtime can be initialized");
@@ -64,9 +60,20 @@ fn main() {
                     Err(e) => return println!("could not stop vm {}, reason: {}", id, e),
                 };
             });
+            Ok(())
         }
-        None => {}
+        None => Ok(()),
     }
+}
+
+fn list() -> Result<()> {
+    let vms = virtualbox::list_vms()?;
+    for vm in vms {
+        let info = vm.info()?;
+        let state = info.get_state()?;
+        println!("{} {:?}", vm.name, state)
+    }
+    Ok(())
 }
 
 const ID_RANGE: RangeInclusive<usize> = 1..=9;

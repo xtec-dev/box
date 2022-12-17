@@ -1355,6 +1355,7 @@ dependencies = [
  "home",
  "indicatif",
  "once_cell",
+ "regex",
  "reqwest",
  "tokio",
  "vboxhelper",

@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
@@ -7,48 +8,20 @@ use vboxhelper::{RunContext, Shutdown, VmId};
 
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
+use regex::Regex;
 use reqwest::Client;
+use strutils::EmptyLine;
 
 mod manage;
+mod strutils;
 
-pub fn list() -> Result<()> {
-    let vms = list_vms()?;
-    for vm in vms {
-        let info = vboxhelper::get_vm_info(&VmId::Name(vm.name.clone()))?;
-
-        let state = match info.state {
-            vboxhelper::VmState::Unknown => "",
-            vboxhelper::VmState::PowerOff => "poweroff",
-            vboxhelper::VmState::Starting => "starting",
-            vboxhelper::VmState::Running => "running",
-            vboxhelper::VmState::Paused => "paused",
-            vboxhelper::VmState::Stopping => "stopping",
-        };
-
-        println!("{} {:?}", vm.name, state)
-    }
-    Ok(())
-}
-
-pub async fn start(id: u16) -> Result<Machine> {
-    let name = format!("xtec-{}", id);
-
-    let vm: Machine = match list_vms()?.iter().find(|&vm| vm.name == name) {
-        Some(vm) => vm.clone(),
-        None => {
-            let vm = Machine { name: name.clone() };
-            import(&vm).await?;
-            vm
-        }
-    };
-
-    println!("Starting vm {}", name);
-    vboxhelper::controlvm::start(
-        &VmId::Name(name.clone()),
-        RunContext::Headless(vboxhelper::Headless::Blocking),
-    )?;
-
-    Ok(vm)
+pub fn list_vms() -> Result<Vec<Machine>> {
+    let list = vboxhelper::get_vm_list()?;
+    let vms: Vec<Machine> = list
+        .iter()
+        .map(|(name, _)| Machine { name: name.clone() })
+        .collect();
+    Ok(vms)
 }
 
 pub async fn stop(id: u16) -> Result<()> {
@@ -84,27 +57,6 @@ async fn import(vm: &Machine) -> Result<()> {
     //vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
 
     Ok(())
-}
-
-pub fn list_vms() -> Result<Vec<Machine>> {
-    let list = vboxhelper::get_vm_list()?;
-    let vms: Vec<Machine> = list
-        .iter()
-        .map(|(name, _)| Machine { name: name.clone() })
-        .collect();
-    Ok(vms)
-
-    /*
-    def read_vms
-              results = {}
-              execute("list", "vms", retryable: true).split("\n").each do |line|
-                if line =~ /^"(.+?)" \{(.+?)\}$/
-                  results[$1.to_s] = $2.to_s
-                end
-              end
-
-              results
-            end*/
 }
 
 // TODO check file exists
@@ -151,11 +103,131 @@ pub struct Machine {
 }
 
 impl Machine {
+    pub fn new(id: u16) -> Machine {
+        let name = format!("xtec-{}", id);
+        Machine { name }
+    }
+
     pub fn _start() -> Result<()> {
-        Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
+        Ok(())
+    }
+
+    pub fn info(&self) -> Result<MachineInfo> {
+        let mut cmd = Command::new(manage::get_cmd());
+        cmd.arg("showvminfo");
+        cmd.arg(&self.name);
+        cmd.arg("--machinereadable");
+
+        let output = cmd.output().expect("Failed to execute VBoxManage");
+
+        let lines = strutils::buf_to_strlines(&output.stdout, EmptyLine::Ignore);
+
+        let mut map = HashMap::new();
+
+        // multiline
+        //let re_ml1 =
+        // Regex::new(r#"^(?P<key>[^"=]+)="(?P<val>[^"=]*)"$"#).unwrap();
+        // let re_ml1 =
+        // Regex::new(r#"^"(?P<key>[^"=]+)"="(?P<val>[^"=]*)"$"#).unwrap();
+
+        // Capture foo="bar" -> foo=bar
+        // This appears to be most common.
+        let re1 = Regex::new(r#"^(?P<key>[^"=]+)="(?P<val>[^"=]*)"$"#).unwrap();
+
+        // Capture "foo"="bar" -> foo=bar
+        let re2 = Regex::new(r#"^"(?P<key>[^"=]+)"="(?P<val>[^"=]*)"$"#).unwrap();
+
+        // foo=bar -> foo=bar
+        let re3 = Regex::new(r#"^(?P<key>[^"=]+)=(?P<val>[^"=]*)$"#).unwrap();
+
+        //let re = Regex::new(r#"^"?(?P<key>[^"=]+)"?="?(?P<val>[^"=]*)"?$"#).
+        // unwrap();
+
+        // ToDo: Handle multiline entires, like descriptions
+        let mut lines = lines.iter();
+        while let Some(line) = lines.next() {
+            //println!("line: {}", line);
+
+            let line = line.trim_end();
+            let cap = if let Some(cap) = re1.captures(&line) {
+                Some(cap)
+            } else if let Some(cap) = re2.captures(&line) {
+                Some(cap)
+            } else if let Some(cap) = re3.captures(&line) {
+                Some(cap)
+            } else {
+                //dbg!(format!("Ignored line: {}", line));
+                None
+            };
+
+            if let Some(cap) = cap {
+                map.insert(cap[1].to_string(), cap[2].to_string());
+            }
+        }
+        let info = MachineInfo(map);
+        Ok(info)
+    }
+
+    pub async fn start(&self) -> Result<()> {
+        if list_vms()?
+            .iter()
+            .find(|&vm| vm.name == self.name)
+            .is_none()
+        {
+            import(self).await?;
+        }
+
+        println!("Starting vm {}", self.name);
+        vboxhelper::controlvm::start(
+            &VmId::Name(self.name.clone()),
+            RunContext::Headless(vboxhelper::Headless::Blocking),
+        )?;
+
+        //Command::new("vboxmanage").arg("list").arg("vms").spawn()?;
+
         Ok(())
     }
 }
+
+pub struct MachineInfo(HashMap<String, String>);
+
+impl MachineInfo {
+    pub fn get_state(&self) -> Result<MachineState> {
+        let state = match self.0.get("VMState") {
+            None => MachineState::Unknown,
+            Some(s) => match s.as_ref() {
+                "poweroff" => MachineState::PowerOff,
+                "starting" => MachineState::Starting,
+                "running" => MachineState::Running,
+                "paused" => MachineState::Paused,
+                "stopping" => MachineState::Stopping,
+                _ => MachineState::Unknown,
+            },
+        };
+        Ok(state)
+    }
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+pub enum MachineState {
+    Unknown, // TODO remove
+    PowerOff,
+    Starting,
+    Running,
+    Paused,
+    Stopping,
+}
+
+/*
+                let state = match info.state {
+                    vboxhelper::VmState::Unknown => "",
+                    vboxhelper::VmState::PowerOff => "poweroff",
+                    vboxhelper::VmState::Starting => "starting",
+                    vboxhelper::VmState::Running => "running",
+                    vboxhelper::VmState::Paused => "paused",
+                    vboxhelper::VmState::Stopping => "stopping",
+                };
+*/
 
 #[cfg(test)]
 mod tests {

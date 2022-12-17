@@ -1,6 +1,3 @@
 /.vagrant
-xtec.ova
-
-# Added by cargo
-
 /target
+xtec.ova
