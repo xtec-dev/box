@@ -19,8 +19,8 @@ jobs:
           SRC_DIR: box
           UPLOAD_MODE: none
 
-      - uses: actions/upload-artifact@v3
-        with:
-          path: |
-            ${{ steps.compile.outputs.BUILT_ARCHIVE }}
-            ${{ steps.compile.outputs.BUILT_CHECKSUM }}
+      #- uses: actions/upload-artifact@v3
+      #  with:
+      #    path: |
+      #      ${{ steps.compile.outputs.BUILT_ARCHIVE }}
+      #      ${{ steps.compile.outputs.BUILT_CHECKSUM }}

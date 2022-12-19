@@ -1,18 +1,15 @@
 use anyhow::{bail, Context, Result};
 use std::collections::HashMap;
-use std::fs::File;
+
 use std::io::{self, Write};
 use std::process::Command;
-use std::{cmp::min, path::Path};
+
 use vboxhelper::{Shutdown, VmId};
 
-use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
 use regex::Regex;
-use reqwest::Client;
 
 mod manage;
-mod ubuntu;
+mod ova;
 
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
@@ -29,45 +26,6 @@ pub async fn stop(id: u16) -> Result<()> {
     Ok(())
 }
 
-// TODO check file exists
-// /var/web/xtec
-async fn download_file(client: &Client, url: &str, path: &Path) -> Result<()> {
-    // Reqwest setup
-    let res = client
-        .get(url)
-        .send()
-        .await
-        .with_context(|| format!("Failed to GET from '{}'", &url))?;
-    let total_size = res
-        .content_length()
-        .with_context(|| format!("Failed to get content length from '{}'", &url))?;
-
-    // Indicatif setup
-    let pb = ProgressBar::new(total_size);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-        .progress_chars("#>-"));
-    pb.set_message(&format!("Downloading {}", url));
-
-    // download chunks
-    let mut file =
-        File::create(path).with_context(|| (format!("Failed to create file '{:?}'", path)))?;
-    let mut downloaded: u64 = 0;
-    let mut stream = res.bytes_stream();
-
-    while let Some(item) = stream.next().await {
-        let chunk = item.context("Error while downloading file")?;
-        file.write_all(&chunk)
-            .context("Error while writing to file")?;
-        let new = min(downloaded + (chunk.len() as u64), total_size);
-        downloaded = new;
-        pb.set_position(new);
-    }
-
-    pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
-    return Ok(());
-}
-
 #[derive(Clone)]
 pub struct Machine {
     pub name: String,
@@ -76,36 +34,6 @@ pub struct Machine {
 impl Machine {
     pub fn new(name: String) -> Machine {
         Machine { name }
-    }
-
-    async fn import(&self) -> Result<()> {
-        let mut path = home::home_dir().expect("Home dir");
-        path = path.join(".xtec");
-        std::fs::create_dir_all(&path)?;
-
-        let ova_path = path.join("xtec.ova");
-        if !ova_path.exists() {
-            download_file(
-                &Client::new(),
-                "https://xtec.optersoft.com/xtec.ova",
-                &ova_path,
-            )
-            .await?;
-        }
-
-        println!("box: importing virtual machine {}", self.name);
-        let output = Command::new(manage::get_cmd())
-            .arg("import")
-            .arg(ova_path)
-            .args(["--vsys", "0", "--vmname", &self.name, "--basefolder"])
-            .arg(path)
-            .output()?;
-        io::stdout().write_all(&output.stdout)?;
-
-        // TODO chek error
-        //vboxmanage import ([Box]::ova) --vsys 0 --vmname $Name --basefolder ([Box]::home)
-
-        Ok(())
     }
 
     pub fn info(&self) -> Result<Option<MachineInfo>> {
@@ -134,7 +62,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
-            None => self.import().await?,
+            None => ova::import(&self.name).await?,
             Some(info) => {
                 let _state = info.get_state()?;
                 //println!("state {}", _state);

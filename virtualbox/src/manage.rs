@@ -15,7 +15,7 @@ pub fn get_cmd() -> PathBuf {
     nm.set_extension("exe");
 
     let exec = match std::env::var_os("VBOX_MSI_INSTALL_PATH") {
-        Some(exec) => Path::new(&exec).join(&nm),
+        Some(exec) => std::path::Path::new(&exec).join(&nm),
         None => nm,
     };
 
