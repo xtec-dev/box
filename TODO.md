@@ -7,8 +7,6 @@ https://dev.to/otomato_io/automating-custom-iso-with-cloud-init-2lc2
 
 https://4sysops.com/archives/managing-virtualbox-vms-with-powershell/
 
-New small ova
-Change default pk with user pk
 
 
 https://docs.rs/vboxhelper/latest/vboxhelper/
