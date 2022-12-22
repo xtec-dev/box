@@ -1,7 +1,3 @@
-
-
-// https://github.com/retep998/winapi-rs
-
 // https://github.com/microsoft/windows-rs/blob/master/docs/FAQ.md
 // https://www.reddit.com/r/rust/comments/wl0z41/comment/ijt9071/
 
@@ -15,30 +11,35 @@ use anyhow::Result;
 use windows::core::*;
 use windows::Win32::System::Com::*;
 
+/*
 #[windows::core::interface("Virtualbox.Virtualbox")]
 unsafe trait Virtualbox: IUnknown {
     //unsafe fn MyFunction(&self) -> windows::core::HRESULT;
 }
+*/
+
+//unsafe trait IVirtualBoxClient {}
+
+
+pub const CUIVirtualBoxClient: GUID = GUID::from_u128(0xdd3fc71d_26c0_4fe1_bf6f_67f633265bba);
+
+trait IVirtualBoxClient{}
+
+//#[windows::core::implement(IVirtualBoxClient)]
+struct VirtualBoxClient();
+/* 
+#[allow(non_snake_case)]
+impl IVirtualBoxClient_Impl for VirtualBoxClient {
+    // fn CreateView(&self) -> Result<()> {}
+}*/
+ 
 
 fn start() -> Result<()> {
     
     unsafe {
-        let stream = CreateStreamOnHGlobal(0, true)?;
-        let values = vec![1u8, 2u8, 3u8, 4u8];
-
-        let mut copied = 0;
-        stream.Write(values.as_ptr() as _, values.len() as _, Some(&mut copied)).ok()?;
-        assert!(copied == 4);
-
-        let mut position = 0;
-        stream.Seek(0, STREAM_SEEK_SET, Some(&mut position))?;
-        assert!(position == 0);
-
-        let mut values = vec![0, 0, 0, 0];
-        let mut copied = 0;
-        stream.Read(values.as_mut_ptr() as _, values.len() as _, Some(&mut copied)).ok()?;
-        assert!(copied == 4);
-        assert_eq!(values, vec![1u8, 2u8, 3u8, 4u8]);
+        CoInitialize(None)?;
+        //let i:VirtualBoxClient = CoCreateInstance(&CUIVirtualBoxClient, None, CLSCTX_INPROC_SERVER)?;    
+        CoUninitialize();
     }
 
     Ok(())
