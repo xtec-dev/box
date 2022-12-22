@@ -9,6 +9,8 @@ use vboxhelper::{Shutdown, VmId};
 use regex::Regex;
 
 mod manage;
+#[cfg(windows)]
+mod manager;
 mod ova;
 
 pub fn list_vms() -> Result<Vec<Machine>> {

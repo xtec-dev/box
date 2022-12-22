@@ -13,5 +13,8 @@ regex = "1.7.0"
 reqwest = { version = "0.11.3", features = ["stream"] }
 tokio = { version = "1.11", features = ["macros", "rt-multi-thread"] }
 vboxhelper = "0.3"
+windows = { version = "0.43", features = [ "Win32_Foundation", "Win32_System_Com", "implement"]}
+
+
 # https://docs.rs/thrussh/latest/thrussh/
 # https://github.com/warp-tech/russh
