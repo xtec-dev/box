@@ -9,8 +9,8 @@ use vboxhelper::{Shutdown, VmId};
 use regex::Regex;
 
 mod manage;
-#[cfg(windows)]
-mod manager;
+//#[cfg(windows)]
+//mod manager;
 mod ova;
 
 pub fn list_vms() -> Result<Vec<Machine>> {
@@ -23,7 +23,7 @@ pub fn list_vms() -> Result<Vec<Machine>> {
 }
 
 pub async fn stop(id: u16) -> Result<()> {
-    let name = format!("xtec-{}", id);
+    let name = format!("box-{}", id);
     vboxhelper::controlvm::shutdown(&VmId::Name(name), Shutdown::AcpiPowerOff)?;
     Ok(())
 }

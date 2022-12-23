@@ -105,7 +105,7 @@ fn list() -> Result<()> {
 }
 
 fn start(id: u16) -> Result<()> {
-    let name = format!("xtec-{}", id);
+    let name = format!("box-{}", id);
     let machine = Machine::new(name);
     let rt = Runtime::new()?;
     rt.block_on(async move {
@@ -133,8 +133,3 @@ fn id_in_range(s: &str) -> Result<u16, String> {
     }
 }
 
-/*
-#[tokio::main]
-async fn main() {
-    virtualbox::start(1).await.expect("machine");
-}*/

@@ -28,7 +28,7 @@ pub async fn import(name: &str) -> Result<()> {
     let ova_path = get_ova().await?;
 
     let mut path = home::home_dir().expect("Home dir");
-    path = path.join(".xtec");
+    path = path.join(".box");
 
     println!("box: importing virtual machine {}", name);
     let output = Command::new(manage::get_cmd())
@@ -48,7 +48,7 @@ pub async fn import(name: &str) -> Result<()> {
 
 pub async fn get_ova() -> Result<PathBuf> {
     let mut path = home::home_dir().expect("Home dir");
-    path = path.join(".xtec").join("ova");
+    path = path.join(".box").join("ova");
     std::fs::create_dir_all(&path)?;
 
     let ova_path = path.join("ubuntu-22_04.ova");
