@@ -36,6 +36,8 @@ pub async fn import(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
+    let init = BOX_PATH.join("init.iso");
+
     let output = Command::new(manage::get_cmd())
         .args([
             "storageattach",
@@ -49,8 +51,8 @@ pub async fn import(name: &str) -> Result<()> {
             "--type",
             "dvddrive",
             "--medium",
-            "",
         ])
+        .arg(init.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 

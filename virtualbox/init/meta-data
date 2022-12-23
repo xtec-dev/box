@@ -1,4 +1,4 @@
-local-hostname: xtec
+local-hostname: box
 network-interfaces: |
   auto enp0s3
   iface enp0s3 inet dhcp

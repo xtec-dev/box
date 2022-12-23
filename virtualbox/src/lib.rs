@@ -6,8 +6,6 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
-use vboxhelper::{Shutdown, VmId};
-
 use regex::Regex;
 
 mod manage;
@@ -16,6 +14,9 @@ mod manage;
 mod ova;
 
 // https://www.virtualbox.org/manual/ch08.html
+//# ssh 2201 -i ~/.ssh/id_ed25519_box -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+
+// $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
 
 static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
 
@@ -65,7 +66,7 @@ impl Machine {
     pub async fn delete(&self) -> Result<()> {
         self.stop().await?;
 
-        print!("{}: deleting", self.name);
+        println!("{}: deleting", self.name);
         let mut cmd = Command::new(manage::get_cmd());
         cmd.arg("unregistervm");
         cmd.arg(&self.name);
