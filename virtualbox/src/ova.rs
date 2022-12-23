@@ -60,6 +60,23 @@ pub async fn import(name: &str) -> Result<()> {
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --type dvddrive --medium "X:\Folder\containing\the.iso"
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --medium "none"
 
+    // TODO wait imported ???
+
+    let output = Command::new(manage::get_cmd())
+        .args(["modifyvm", name, "--nic1", "nat"])
+        .arg(init.to_path_buf())
+        .output()?;
+    io::stdout().write_all(&output.stdout)?;
+
+    let output = Command::new(manage::get_cmd())
+        .args(["modifyvm", name, "--natpf1", "ssh,tcp,127.0.0.1,2201,,22"])
+        .arg(init.to_path_buf())
+        .output()?;
+    io::stdout().write_all(&output.stdout)?;
+
+    // vboxmanage modifyvm box-1 --nic1 nat
+    // vboxmanage modifyvm box-1 --natpf1 "ssh,tcp,127.0.0.1,2201,,22"
+
     Ok(())
 }
 
