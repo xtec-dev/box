@@ -1,6 +1,8 @@
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 
+// https://www.virtualbox.org/sdkref/
+
 pub static _VBOX_MANAGE: Lazy<PathBuf> = Lazy::new(|| get_cmd());
 
 #[cfg(not(windows))]

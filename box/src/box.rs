@@ -19,6 +19,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Unregisters a virtual machine and delete all associated files.
+    Delete {
+        /// Virtual machine id, from 1 to 9
+        #[arg(value_parser = id_in_range)]
+        id: u16,
+    },
+
     /// Lists all virtual machines currently registered with VirtualBox.
     List {},
 
@@ -40,20 +47,24 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
+        Some(Commands::Delete { id }) => delete(*id),
         Some(Commands::List {}) => list(),
         Some(Commands::Start { id }) => start(*id),
-        Some(Commands::Stop { id }) => {
-            let rt = Runtime::new().expect("tokio runtime can be initialized");
-            rt.block_on(async move {
-                match virtualbox::stop(*id).await {
-                    Ok(v) => v,
-                    Err(e) => return println!("could not stop vm {}, reason: {}", id, e),
-                };
-            });
-            Ok(())
-        }
+        Some(Commands::Stop { id }) => stop(*id),
         None => Ok(()),
     }
+}
+
+fn delete(id: u16) -> Result<()> {
+    let name = format!("box-{}", id);
+    let machine = Machine::new(name);
+    let rt = Runtime::new()?;
+    rt.block_on(async move {
+        if let Err(err) = machine.delete().await {
+            println!("{}: {}", machine.name, err);
+        }
+    });
+    Ok(())
 }
 
 fn list() -> Result<()> {
@@ -116,6 +127,18 @@ fn start(id: u16) -> Result<()> {
     Ok(())
 }
 
+fn stop(id: u16) -> Result<()> {
+    let name = format!("box-{}", id);
+    let machine = Machine::new(name);
+    let rt = Runtime::new()?;
+    rt.block_on(async move {
+        if let Err(err) = machine.stop().await {
+            println!("{}: {}", machine.name, err);
+        }
+    });
+    Ok(())
+}
+
 const ID_RANGE: RangeInclusive<usize> = 1..=9;
 
 fn id_in_range(s: &str) -> Result<u16, String> {
@@ -132,4 +155,3 @@ fn id_in_range(s: &str) -> Result<u16, String> {
         ))
     }
 }
-

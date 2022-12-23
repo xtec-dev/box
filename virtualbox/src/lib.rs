@@ -1,7 +1,9 @@
 use anyhow::{bail, Context, Result};
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use std::io::{self, Write};
+use std::path::PathBuf;
 use std::process::Command;
 
 use vboxhelper::{Shutdown, VmId};
@@ -13,6 +15,10 @@ mod manage;
 //mod manager;
 mod ova;
 
+// https://www.virtualbox.org/manual/ch08.html
+
+static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
+
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
     let vms: Vec<Machine> = list
@@ -20,12 +26,6 @@ pub fn list_vms() -> Result<Vec<Machine>> {
         .map(|(name, _)| Machine { name: name.clone() })
         .collect();
     Ok(vms)
-}
-
-pub async fn stop(id: u16) -> Result<()> {
-    let name = format!("box-{}", id);
-    vboxhelper::controlvm::shutdown(&VmId::Name(name), Shutdown::AcpiPowerOff)?;
-    Ok(())
 }
 
 #[derive(Clone)]
@@ -62,6 +62,28 @@ impl Machine {
         }
     }
 
+    pub async fn delete(&self) -> Result<()> {
+        self.stop().await?;
+
+        print!("{}: deleting", self.name);
+        let mut cmd = Command::new(manage::get_cmd());
+        cmd.arg("unregistervm");
+        cmd.arg(&self.name);
+        cmd.arg("--delete");
+
+        //println!("Starting vm {}", self.name);
+
+        let output = cmd.output()?;
+        io::stdout().write_all(&output.stdout)?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let msg = String::from_utf8(output.stderr)?;
+            bail!(format!("delete:{:?}", msg))
+        }
+    }
+
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
             None => ova::import(&self.name).await?,
@@ -87,6 +109,35 @@ impl Machine {
         } else {
             let msg = String::from_utf8(output.stderr)?;
             bail!(format!("start:{:?}", msg))
+        }
+    }
+
+    pub async fn stop(&self) -> Result<()> {
+        match self.info()? {
+            None => return Ok(()),
+            Some(info) => {
+                let state = info.get_state()?;
+                if state == MachineState::PowerOff || state == MachineState::Stopping {
+                    return Ok(());
+                }
+            }
+        }
+
+        let mut cmd = Command::new(manage::get_cmd());
+        cmd.arg("controlvm");
+        cmd.arg(&self.name);
+        cmd.arg("acpipowerbutton");
+
+        //println!("Starting vm {}", self.name);
+
+        let output = cmd.output()?;
+        io::stdout().write_all(&output.stdout)?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            let msg = String::from_utf8(output.stderr)?;
+            bail!(format!("stop:{:?}", msg))
         }
     }
 }

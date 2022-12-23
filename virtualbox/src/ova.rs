@@ -19,7 +19,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 // https://github.com/marysaka/mkisofs-rs
 //https://wiki.debian.org/genisoimage
 
-use crate::manage;
+use crate::{manage, BOX_PATH};
 
 const UBUNTU: &str =
     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova";
@@ -27,15 +27,30 @@ const UBUNTU: &str =
 pub async fn import(name: &str) -> Result<()> {
     let ova_path = get_ova().await?;
 
-    let mut path = home::home_dir().expect("Home dir");
-    path = path.join(".box");
-
     println!("box: importing virtual machine {}", name);
     let output = Command::new(manage::get_cmd())
         .arg("import")
         .arg(ova_path)
         .args(["--vsys", "0", "--vmname", name, "--basefolder"])
-        .arg(path)
+        .arg(BOX_PATH.to_path_buf())
+        .output()?;
+    io::stdout().write_all(&output.stdout)?;
+
+    let output = Command::new(manage::get_cmd())
+        .args([
+            "storageattach",
+            name,
+            "--storagectl",
+            "IDE",
+            "--port",
+            "0",
+            "--device",
+            "0",
+            "--type",
+            "dvddrive",
+            "--medium",
+            "",
+        ])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
@@ -47,8 +62,7 @@ pub async fn import(name: &str) -> Result<()> {
 }
 
 pub async fn get_ova() -> Result<PathBuf> {
-    let mut path = home::home_dir().expect("Home dir");
-    path = path.join(".box").join("ova");
+    let path = BOX_PATH.join("ova");
     std::fs::create_dir_all(&path)?;
 
     let ova_path = path.join("ubuntu-22_04.ova");
