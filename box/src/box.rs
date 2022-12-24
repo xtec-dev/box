@@ -1,12 +1,13 @@
-mod google;
-mod hetzner;
-
 use std::ops::RangeInclusive;
+use std::process::Command;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tokio::runtime::Runtime;
 use virtualbox::Machine;
+
+mod google;
+mod hetzner;
 
 #[derive(Parser)]
 #[command(name = "box")]
@@ -30,6 +31,13 @@ enum Commands {
     List {},
 
     /// Start a virtual machine
+    SSH {
+        /// Virtual machine id, from 1 to 9
+        #[arg(value_parser = id_in_range)]
+        id: u16,
+    },
+
+    /// Start a virtual machine
     Start {
         /// Virtual machine id, from 1 to 9
         #[arg(value_parser = id_in_range)]
@@ -49,6 +57,7 @@ fn main() -> Result<()> {
     match &cli.command {
         Some(Commands::Delete { id }) => delete(*id),
         Some(Commands::List {}) => list(),
+        Some(Commands::SSH { id }) => ssh(*id),
         Some(Commands::Start { id }) => start(*id),
         Some(Commands::Stop { id }) => stop(*id),
         None => Ok(()),
@@ -113,6 +122,30 @@ fn list() -> Result<()> {
             println!("{:width$}  {}{}", nm, uuid, runstate, width = max_len);
         }
     */
+}
+
+//# ssh -p 2201 -i ~/.ssh/id_ed25519_box -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
+
+fn ssh(id: u16) -> Result<()> {
+    let port = format!("220{}", id);
+
+    let mut child = Command::new("ssh")
+        .args([
+            "-p",
+            &port,
+            "-i",
+            "~/.ssh/id_ed25519_box",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "alumne@127.0.0.1",
+        ])
+        .spawn()
+        .unwrap();
+    let _asd = child.wait().unwrap();
+
+    Ok(())
 }
 
 fn start(id: u16) -> Result<()> {

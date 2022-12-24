@@ -27,7 +27,7 @@ const UBUNTU: &str =
 pub async fn import(name: &str) -> Result<()> {
     let ova_path = get_ova().await?;
 
-    println!("box: importing virtual machine {}", name);
+    println!("{}: import", name);
     let output = Command::new(manage::get_cmd())
         .arg("import")
         .arg(ova_path)
@@ -56,7 +56,6 @@ pub async fn import(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    // add storage seed.iso
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --type dvddrive --medium "X:\Folder\containing\the.iso"
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --medium "none"
 
@@ -64,13 +63,11 @@ pub async fn import(name: &str) -> Result<()> {
 
     let output = Command::new(manage::get_cmd())
         .args(["modifyvm", name, "--nic1", "nat"])
-        .arg(init.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
     let output = Command::new(manage::get_cmd())
         .args(["modifyvm", name, "--natpf1", "ssh,tcp,127.0.0.1,2201,,22"])
-        .arg(init.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 

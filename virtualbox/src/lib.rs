@@ -10,13 +10,10 @@ use regex::Regex;
 
 mod manage;
 //#[cfg(windows)]
-//mod manager;
+//mod mscom;
 mod ova;
 
 // https://www.virtualbox.org/manual/ch08.html
-//# ssh -p 2201 -i ~/.ssh/id_ed25519_box -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
-
-// $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
 
 // server ->   /var/log/auth.log
 
@@ -68,7 +65,7 @@ impl Machine {
     pub async fn delete(&self) -> Result<()> {
         self.stop().await?;
 
-        println!("{}: deleting", self.name);
+        println!("{}: delete", self.name);
         let mut cmd = Command::new(manage::get_cmd());
         cmd.arg("unregistervm");
         cmd.arg(&self.name);
@@ -99,8 +96,8 @@ impl Machine {
         let mut cmd = Command::new(manage::get_cmd());
         cmd.arg("startvm");
         cmd.arg(&self.name);
-        cmd.arg("--type");
-        cmd.arg("headless");
+        //cmd.arg("--type");
+        //cmd.arg("headless");
 
         //println!("Starting vm {}", self.name);
 
@@ -113,6 +110,7 @@ impl Machine {
             let msg = String::from_utf8(output.stderr)?;
             bail!(format!("start:{:?}", msg))
         }
+        // hostnamectl set-hostname --static xxx
     }
 
     pub async fn stop(&self) -> Result<()> {
@@ -125,6 +123,8 @@ impl Machine {
                 }
             }
         }
+
+        println!("{}: stop", self.name);
 
         let mut cmd = Command::new(manage::get_cmd());
         cmd.arg("controlvm");
