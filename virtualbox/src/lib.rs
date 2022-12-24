@@ -11,7 +11,7 @@ use regex::Regex;
 mod manage;
 //#[cfg(windows)]
 //mod mscom;
-mod ova;
+mod cloud;
 
 // https://www.virtualbox.org/manual/ch08.html
 
@@ -86,7 +86,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
-            None => ova::import(&self.name).await?,
+            None => cloud::import(&self.name).await?,
             Some(info) => {
                 let _state = info.get_state()?;
                 //println!("state {}", _state);
