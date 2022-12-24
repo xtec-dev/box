@@ -8,10 +8,11 @@ use std::process::Command;
 
 use regex::Regex;
 
+mod cloud;
 mod manage;
 //#[cfg(windows)]
 //mod mscom;
-mod cloud;
+pub mod ssh;
 
 // https://www.virtualbox.org/manual/ch08.html
 

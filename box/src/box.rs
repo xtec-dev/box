@@ -124,28 +124,8 @@ fn list() -> Result<()> {
     */
 }
 
-//# ssh -p 2201 -i ~/.ssh/id_ed25519_box -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1
-
 fn ssh(id: u16) -> Result<()> {
-    let port = format!("220{}", id);
-
-    let mut child = Command::new("ssh")
-        .args([
-            "-p",
-            &port,
-            "-i",
-            "~/.ssh/id_ed25519_box",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "-o",
-            "StrictHostKeyChecking=no",
-            "alumne@127.0.0.1",
-        ])
-        .spawn()
-        .unwrap();
-    let _asd = child.wait().unwrap();
-
-    Ok(())
+    virtualbox::ssh::connect(id)
 }
 
 fn start(id: u16) -> Result<()> {
