@@ -2,6 +2,7 @@ use anyhow::{bail, Context, Result};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+use std::fmt::Display;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
@@ -20,6 +21,7 @@ pub mod ssh;
 
 static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
 
+
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
     let vms: Vec<Machine> = list
@@ -31,23 +33,41 @@ pub fn list_vms() -> Result<Vec<Machine>> {
 
 #[derive(Clone)]
 pub struct Machine {
-    pub name: String,
+    pub name:String
+}
+
+impl Display for Machine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
+impl AsRef<str> for Machine {
+    fn as_ref(&self) -> &str {
+        &self.name
+    }
 }
 
 impl Machine {
     pub fn new(name: String) -> Machine {
-        Machine { name }
+        Machine { name}
+    }
+
+    pub fn id(&self) -> u8 {
+        let regex = Regex::new(r"[a-z]+-([0-9])").unwrap();
+        let caps = regex.captures(&self.name).unwrap();
+        let sid = caps.get(1).unwrap().as_str();
+        let id = sid.parse::<u8>().unwrap();
+        id
     }
 
     pub fn info(&self) -> Result<Option<MachineInfo>> {
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.arg("showvminfo");
-        cmd.arg(&self.name);
-        cmd.arg("--machinereadable");
+        cmd.args(["showvminfo", self.as_ref(),"--machinereadable"]);
 
         let output = cmd
             .output()
-            .with_context(|| format!("{}: getting info:", self.name))?;
+            .with_context(|| format!("{}: getting info:", self))?;
 
         if output.status.success() {
             let configuration = std::str::from_utf8(&output.stdout)?;
@@ -66,11 +86,10 @@ impl Machine {
     pub async fn delete(&self) -> Result<()> {
         self.stop().await?;
 
-        println!("{}: delete", self.name);
+        println!("{}: delete", self);
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.arg("unregistervm");
-        cmd.arg(&self.name);
-        cmd.arg("--delete");
+        cmd.args(["unregistervm",self.as_ref(),"--delete"]);
+
 
         //println!("Starting vm {}", self.name);
 
@@ -87,7 +106,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
-            None => cloud::import(&self.name).await?,
+            None => cloud::import(&self).await?,
             Some(info) => {
                 let _state = info.get_state()?;
                 //println!("state {}", _state);
@@ -95,13 +114,7 @@ impl Machine {
         };
 
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.arg("startvm");
-        cmd.arg(&self.name);
-        cmd.arg("--type");
-        cmd.arg("headless");
-
-        //println!("Starting vm {}", self.name);
-
+        cmd.args(["startvm",self.as_ref(),"--type","headless" ]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -125,15 +138,10 @@ impl Machine {
             }
         }
 
-        println!("{}: stop", self.name);
+        println!("{}: stop", self);
 
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.arg("controlvm");
-        cmd.arg(&self.name);
-        cmd.arg("acpipowerbutton");
-
-        //println!("Starting vm {}", self.name);
-
+        cmd.args(["controlvm", self.as_ref(),"acpipowerbutton"]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -228,6 +236,13 @@ impl std::fmt::Display for MachineState {
 mod tests {
 
     use super::*;
+
+    #[test]fn test_machine_id() {
+
+        let m = Machine::new(String::from("box-2"));
+        assert_eq!(2,m.id())
+
+    }
 
     #[test]
     fn test_machineinfo_parse() {

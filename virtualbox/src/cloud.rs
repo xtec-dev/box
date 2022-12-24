@@ -15,7 +15,7 @@ use tokio::io::AsyncWriteExt;
 
 // https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
 
-use crate::{manage, BOX_PATH};
+use crate::{manage, BOX_PATH, Machine};
 
 const UBUNTU: &str =
     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova";
@@ -24,14 +24,14 @@ const INIT_ISO: &[u8] = include_bytes!("../init/init.iso");
 
 
 
-pub async fn import(name: &str) -> Result<()> {
+pub async fn import(machine: &Machine) -> Result<()> {
     let ova_path = get_ova().await?;
 
-    println!("{}: import", name);
+    println!("{}: import", machine);
     let output = Command::new(manage::get_cmd())
         .arg("import")
         .arg(ova_path)
-        .args(["--vsys", "0", "--vmname", name, "--basefolder"])
+        .args(["--vsys", "0", "--vmname", machine.as_ref(), "--basefolder"])
         .arg(BOX_PATH.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
@@ -42,7 +42,7 @@ pub async fn import(name: &str) -> Result<()> {
     let output = Command::new(manage::get_cmd())
         .args([
             "storageattach",
-            name,
+            machine.as_ref(),
             "--storagectl",
             "IDE",
             "--port",
@@ -62,12 +62,14 @@ pub async fn import(name: &str) -> Result<()> {
 
 
     let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--nic1", "nat"])
+        .args(["modifyvm", machine.as_ref(), "--nic1", "nat"])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
+    let rule = format!("ssh,tcp,127.0.0.1,220{},,22",machine.id());
+
     let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--natpf1", "ssh,tcp,127.0.0.1,2201,,22"])
+        .args(["modifyvm", machine.as_ref(), "--natpf1", &rule])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 

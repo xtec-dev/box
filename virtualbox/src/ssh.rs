@@ -26,3 +26,15 @@ pub fn connect(id: u16) -> Result<()> {
 
     Ok(())
 }
+
+/*
+
+
+Host box	
+    HostName 127.0.0.1
+    IdentityFile ~/.ssh/id_ed25519_box
+    User alumne
+    Port 2201
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    */
