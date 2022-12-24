@@ -96,8 +96,8 @@ impl Machine {
         let mut cmd = Command::new(manage::get_cmd());
         cmd.arg("startvm");
         cmd.arg(&self.name);
-        //cmd.arg("--type");
-        //cmd.arg("headless");
+        cmd.arg("--type");
+        cmd.arg("headless");
 
         //println!("Starting vm {}", self.name);
 
