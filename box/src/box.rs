@@ -1,6 +1,6 @@
-use std::ops::RangeInclusive;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::ops::RangeInclusive;
 use tokio::runtime::Runtime;
 use virtualbox::Machine;
 
@@ -123,7 +123,15 @@ fn list() -> Result<()> {
 }
 
 fn ssh(id: u16) -> Result<()> {
-    virtualbox::ssh::connect(id)
+    let name = format!("box-{}", id);
+    let machine = Machine::new(name);
+    let rt = Runtime::new()?;
+    rt.block_on(async move {
+        if let Err(err) = virtualbox::ssh::connect(id).await {
+            println!("{}: {}", machine.name, err);
+        }
+    });
+    Ok(())
 }
 
 fn start(id: u16) -> Result<()> {

@@ -1,10 +1,29 @@
 use std::process::Command;
 
 use anyhow::Result;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 
-pub fn connect(id: u16) -> Result<()> {
+const PK: &str = r#"-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VAAAAIi6f7S0un+0
+tAAAAAtzc2gtZWQyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VA
+AAAEBndCXRQsqznnNAG+XsDzdSF9SzhoUqBFp/lRpBJcVygJdMddarXNcDnTCO2TFoF5uq
+rD3sicDofldtedxhlDdUAAAAA2JveAEC
+-----END OPENSSH PRIVATE KEY-----"#;
 
-    let i = home::home_dir().expect("Home dir").join(".ssh").join("id_ed25519_box");
+pub async fn connect(id: u16) -> Result<()> {
+    let pk = home::home_dir()
+        .expect("Home dir")
+        .join(".ssh")
+        .join("id_ed25519_box");
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&pk)
+        .await?;
+    file.write_all(PK.as_bytes()).await?;
 
     let port = format!("220{}", id);
 
@@ -13,12 +32,12 @@ pub fn connect(id: u16) -> Result<()> {
             "-p",
             &port,
             "-i",
-            &i.into_os_string().into_string().unwrap(),
+            &pk.into_os_string().into_string().unwrap(),
             "-o",
             "UserKnownHostsFile=/dev/null",
             "-o",
             "StrictHostKeyChecking=no",
-            "alumne@127.0.0.1",
+            "box@127.0.0.1",
         ])
         .spawn()
         .unwrap();
@@ -30,7 +49,7 @@ pub fn connect(id: u16) -> Result<()> {
 /*
 
 
-Host box	
+Host box
     HostName 127.0.0.1
     IdentityFile ~/.ssh/id_ed25519_box
     User alumne

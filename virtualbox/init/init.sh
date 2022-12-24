@@ -8,6 +8,8 @@
 
 # https://github.com/johto/iso9660wrap
 
+# 
+
 rm init.iso
 genisoimage -output init.iso --input-charset utf-8 -volid cidata -joliet -rock user-data meta-data
 rm  ~/.box/init.iso

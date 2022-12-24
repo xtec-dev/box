@@ -1,6 +1,6 @@
 #cloud-config
 users:
-  - name: alumne
+  - name: box
     groups: sudo
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     plain_text_passwd: password
@@ -8,7 +8,7 @@ users:
     shell: /bin/bash
     #ssh_pwauth: true
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEF5ihgAq1whiWiqoB7bVFCjG0/9mzUbMg3S4jPfma3Y alumne
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box
 
 # NOTE: Cloud-init applies network settings on every boot by default. To retain network settings from first boot, add the following ‘write_files’ section:
 write_files:

@@ -21,7 +21,6 @@ pub mod ssh;
 
 static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
 
-
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
     let vms: Vec<Machine> = list
@@ -33,7 +32,7 @@ pub fn list_vms() -> Result<Vec<Machine>> {
 
 #[derive(Clone)]
 pub struct Machine {
-    pub name:String
+    pub name: String,
 }
 
 impl Display for Machine {
@@ -42,6 +41,7 @@ impl Display for Machine {
     }
 }
 
+// TODO delete
 impl AsRef<str> for Machine {
     fn as_ref(&self) -> &str {
         &self.name
@@ -50,7 +50,7 @@ impl AsRef<str> for Machine {
 
 impl Machine {
     pub fn new(name: String) -> Machine {
-        Machine { name}
+        Machine { name }
     }
 
     pub fn id(&self) -> u8 {
@@ -63,7 +63,7 @@ impl Machine {
 
     pub fn info(&self) -> Result<Option<MachineInfo>> {
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["showvminfo", self.as_ref(),"--machinereadable"]);
+        cmd.args(["showvminfo", self.as_ref(), "--machinereadable"]);
 
         let output = cmd
             .output()
@@ -88,8 +88,7 @@ impl Machine {
 
         println!("{}: delete", self);
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["unregistervm",self.as_ref(),"--delete"]);
-
+        cmd.args(["unregistervm", self.as_ref(), "--delete"]);
 
         //println!("Starting vm {}", self.name);
 
@@ -114,7 +113,7 @@ impl Machine {
         };
 
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["startvm",self.as_ref(),"--type","headless" ]);
+        cmd.args(["startvm", self.as_ref(), "--type", "headless"]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -141,7 +140,7 @@ impl Machine {
         println!("{}: stop", self);
 
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["controlvm", self.as_ref(),"acpipowerbutton"]);
+        cmd.args(["controlvm", self.as_ref(), "acpipowerbutton"]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -237,11 +236,10 @@ mod tests {
 
     use super::*;
 
-    #[test]fn test_machine_id() {
-
+    #[test]
+    fn test_machine_id() {
         let m = Machine::new(String::from("box-2"));
-        assert_eq!(2,m.id())
-
+        assert_eq!(2, m.id())
     }
 
     #[test]
