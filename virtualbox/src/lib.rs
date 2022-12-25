@@ -107,7 +107,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
-            None => ubuntu::import(&self).await?,
+            None => coreos::import(&self).await?,
             Some(info) => {
                 let _state = info.get_state()?;
                 //println!("state {}", _state);

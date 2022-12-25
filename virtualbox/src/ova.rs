@@ -17,8 +17,9 @@ pub async fn get(name: &str, url: &str) -> Result<PathBuf> {
 
     let name = format!("{}.ova", name);
 
-    let ova_path = path.join(name);
+    let ova_path = path.join(&name);
     if !ova_path.exists() {
+        println!("ova: import {}", name);
         download_file(&Client::new(), &url, &ova_path).await?;
     }
 
