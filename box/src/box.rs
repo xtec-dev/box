@@ -4,9 +4,6 @@ use std::ops::RangeInclusive;
 use tokio::runtime::Runtime;
 use virtualbox::Machine;
 
-mod google;
-mod hetzner;
-
 #[derive(Parser)]
 #[command(name = "box")]
 #[command(author = "David de Mingo <david@optersoft.com>")]
@@ -37,7 +34,11 @@ enum Commands {
 
     /// Start a virtual machine
     Start {
-        /// Virtual machine id, from 1 to 9
+        ///
+        #[arg(short, long)]
+        provider: Option<String>,
+
+        /// Machine id, from 1 to 9
         #[arg(value_parser = id_in_range)]
         id: u16,
     },
@@ -56,7 +57,7 @@ fn main() -> Result<()> {
         Some(Commands::Delete { id }) => delete(*id),
         Some(Commands::List {}) => list(),
         Some(Commands::SSH { id }) => ssh(*id),
-        Some(Commands::Start { id }) => start(*id),
+        Some(Commands::Start { provider, id }) => start(*id),
         Some(Commands::Stop { id }) => stop(*id),
         None => Ok(()),
     }
