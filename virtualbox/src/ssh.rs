@@ -4,13 +4,14 @@ use anyhow::Result;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
-const PK: &str = r#"-----BEGIN OPENSSH PRIVATE KEY-----
+const KEY: &str = r#"-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
 QyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VAAAAIi6f7S0un+0
 tAAAAAtzc2gtZWQyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VA
 AAAEBndCXRQsqznnNAG+XsDzdSF9SzhoUqBFp/lRpBJcVygJdMddarXNcDnTCO2TFoF5uq
 rD3sicDofldtedxhlDdUAAAAA2JveAEC
------END OPENSSH PRIVATE KEY-----"#;
+-----END OPENSSH PRIVATE KEY-----
+"#;
 
 pub async fn connect(id: u16) -> Result<()> {
     let pk = home::home_dir()
@@ -23,7 +24,7 @@ pub async fn connect(id: u16) -> Result<()> {
         .write(true)
         .open(&pk)
         .await?;
-    file.write_all(PK.as_bytes()).await?;
+    file.write_all(KEY.as_bytes()).await?;
 
     let port = format!("220{}", id);
 
@@ -44,6 +45,23 @@ pub async fn connect(id: u16) -> Result<()> {
     let _asd = child.wait().unwrap();
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+
+    use ssh_key::PrivateKey;
+
+    use super::*;
+
+    #[test]
+    fn test_key() -> Result<()> {
+        let key = PrivateKey::from_openssh(KEY)?;
+        assert_eq!(key.algorithm(), ssh_key::Algorithm::Ed25519);
+        assert_eq!(key.comment(), "box");
+
+        Ok(())
+    }
 }
 
 /*

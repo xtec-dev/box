@@ -9,8 +9,9 @@ use std::process::Command;
 
 use regex::Regex;
 
-mod cloud;
+mod coreos;
 mod manage;
+mod ubuntu;
 //#[cfg(windows)]
 //mod mscom;
 pub mod ssh;
@@ -105,7 +106,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
-            None => cloud::import(&self).await?,
+            None => ubuntu::import(&self).await?,
             Some(info) => {
                 let _state = info.get_state()?;
                 //println!("state {}", _state);

@@ -7,7 +7,7 @@ use std::process::Command;
 use std::{cmp::min, path::Path};
 
 use indicatif::{ProgressBar, ProgressStyle};
-use tokio::fs::{OpenOptions};
+use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
 // https://github.com/marysaka/mkisofs-rs
@@ -15,14 +15,12 @@ use tokio::io::AsyncWriteExt;
 
 // https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
 
-use crate::{manage, BOX_PATH, Machine};
+use crate::{manage, Machine, BOX_PATH};
 
 const UBUNTU: &str =
     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova";
 
 const INIT_ISO: &[u8] = include_bytes!("../init/init.iso");
-
-
 
 pub async fn import(machine: &Machine) -> Result<()> {
     let ova_path = get_ova().await?;
@@ -57,16 +55,14 @@ pub async fn import(machine: &Machine) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --medium "none"
-
 
     let output = Command::new(manage::get_cmd())
         .args(["modifyvm", machine.as_ref(), "--nic1", "nat"])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let rule = format!("ssh,tcp,127.0.0.1,220{},,22",machine.id());
+    let rule = format!("ssh,tcp,127.0.0.1,220{},,22", machine.id());
 
     let output = Command::new(manage::get_cmd())
         .args(["modifyvm", machine.as_ref(), "--natpf1", &rule])
@@ -88,9 +84,13 @@ async fn get_ova() -> Result<PathBuf> {
     Ok(ova_path)
 }
 
-async fn make_init(path: &Path) -> Result<()> {   
-
-    let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(&path).await?;
+async fn make_init(path: &Path) -> Result<()> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .await?;
     file.write_all(INIT_ISO).await?;
 
     Ok(())
@@ -115,8 +115,8 @@ async fn download_file(client: &Client, url: &str, path: &Path) -> Result<()> {
     //pb.set_message(&format!("Downloading {}", url));
 
     // download chunks
-    let mut file =
-        std::fs::File::create(path).with_context(|| (format!("Failed to create file '{:?}'", path)))?;
+    let mut file = std::fs::File::create(path)
+        .with_context(|| (format!("Failed to create file '{:?}'", path)))?;
     let mut downloaded: u64 = 0;
     let mut stream = res.bytes_stream();
 
