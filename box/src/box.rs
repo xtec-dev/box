@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
-use tokio::runtime::Runtime;
 use virtualbox::Machine;
 
 #[derive(Parser)]
@@ -16,9 +15,10 @@ struct Cli {
 enum Commands {
     /// Create a Virtual Machine.
     Create {
+        /// The name of the Virtual Machine.
         name: String,
 
-        ///
+        /// Provider
         #[arg(value_enum,short,long, default_value_t = Provider::VirtualBox)]
         provider: Provider,
 
@@ -73,35 +73,40 @@ enum Provider {
     VirtualBox,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
-    match &cli.command {
+
+    let result = match &cli.command {
         Some(Commands::Create {
             name,
             provider,
             image,
-        }) => {
-            println!("{} {:?} {:?}", name, provider, image);
-            Ok(())
-        }
-        Some(Commands::Delete { name }) => delete(name),
+        }) => create(name, provider, image).await,
+        Some(Commands::Delete { name }) => delete(name).await,
         Some(Commands::List {}) => list(),
-        Some(Commands::SSH { name }) => ssh(name),
-        Some(Commands::Start { name }) => start(name),
-        Some(Commands::Stop { name }) => stop(name),
+        Some(Commands::SSH { name }) => ssh(name).await,
+        Some(Commands::Start { name }) => start(name).await,
+        Some(Commands::Stop { name }) => stop(name).await,
         None => Ok(()),
+    };
+
+    if let Err(err) = result {
+        println!("{}", err);
     }
 }
 
-fn delete(name: &String) -> Result<()> {
+async fn create(name: &String, provider: &Provider, image: &Image) -> Result<()> {
+    let _p = provider;
+    match image {
+        Image::Coreos => virtualbox::create(name, virtualbox::Image::CoreOS).await,
+        Image::Ubuntu => virtualbox::create(name, virtualbox::Image::Ubuntu).await,
+    }
+}
+
+async fn delete(name: &String) -> Result<()> {
     let machine = Machine::new(name.clone());
-    let rt = Runtime::new()?;
-    rt.block_on(async move {
-        if let Err(err) = machine.delete().await {
-            println!("{}: {}", machine.name, err);
-        }
-    });
-    Ok(())
+    machine.delete().await
 }
 
 fn list() -> Result<()> {
@@ -116,35 +121,17 @@ fn list() -> Result<()> {
     Ok(())
 }
 
-fn ssh(name: &String) -> Result<()> {
+async fn ssh(name: &String) -> Result<()> {
     let machine = Machine::new(name.clone());
-    let rt = Runtime::new()?;
-    rt.block_on(async move {
-        if let Err(err) = machine.ssh().await {
-            println!("{}: {}", machine.name, err);
-        }
-    });
-    Ok(())
+    machine.ssh().await
 }
 
-fn start(name: &String) -> Result<()> {
+async fn start(name: &String) -> Result<()> {
     let machine = Machine::new(name.clone());
-    let rt = Runtime::new()?;
-    rt.block_on(async move {
-        if let Err(err) = machine.start().await {
-            println!("{}: {}", machine.name, err);
-        }
-    });
-    Ok(())
+    machine.start().await
 }
 
-fn stop(name: &String) -> Result<()> {
+async fn stop(name: &String) -> Result<()> {
     let machine = Machine::new(name.clone());
-    let rt = Runtime::new()?;
-    rt.block_on(async move {
-        if let Err(err) = machine.stop().await {
-            println!("{}: {}", machine.name, err);
-        }
-    });
-    Ok(())
+    machine.stop().await
 }

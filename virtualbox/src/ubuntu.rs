@@ -6,7 +6,8 @@ use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 
 use crate::ova;
-use crate::{manage, Machine, BOX_PATH};
+use crate::ssh;
+use crate::{manage, BOX_PATH};
 
 // https://github.com/marysaka/mkisofs-rs
 //https://wiki.debian.org/genisoimage
@@ -18,14 +19,14 @@ const UBUNTU_URL: &str =
 
 const INIT_ISO: &[u8] = include_bytes!("../init/init.iso");
 
-pub async fn import(machine: &Machine) -> Result<()> {
+pub async fn create(name: &str) -> Result<()> {
     let ova_path = ova::get("ubuntu-22_04", UBUNTU_URL).await?;
 
-    println!("{}: import", machine);
+    println!("{}: import", name);
     let output = Command::new(manage::get_cmd())
         .arg("import")
         .arg(ova_path)
-        .args(["--vsys", "0", "--vmname", machine.as_ref(), "--basefolder"])
+        .args(["--vsys", "0", "--vmname", name, "--basefolder"])
         .arg(BOX_PATH.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
@@ -36,7 +37,7 @@ pub async fn import(machine: &Machine) -> Result<()> {
     let output = Command::new(manage::get_cmd())
         .args([
             "storageattach",
-            machine.as_ref(),
+            name,
             "--storagectl",
             "IDE",
             "--port",
@@ -54,16 +55,11 @@ pub async fn import(machine: &Machine) -> Result<()> {
     // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --medium "none"
 
     let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", machine.as_ref(), "--nic1", "nat"])
+        .args(["modifyvm", name, "--nic1", "nat"])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let rule = format!("ssh,tcp,127.0.0.1,220{},,22", machine.id());
-
-    let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", machine.as_ref(), "--natpf1", &rule])
-        .output()?;
-    io::stdout().write_all(&output.stdout)?;
+    ssh::set_port_forward(name)?;
 
     Ok(())
 }

@@ -14,14 +14,19 @@ mod manage;
 //#[cfg(windows)]
 //mod mscom;
 mod ova;
-pub mod ssh;
+mod ssh;
 mod ubuntu;
 
 // https://www.virtualbox.org/manual/ch08.html
 
-// server ->   /var/log/auth.log
-
 static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
+
+pub async fn create(name: &str, image: Image) -> Result<()> {
+    match image {
+        Image::CoreOS => coreos::create(name).await,
+        Image::Ubuntu => ubuntu::create(name).await,
+    }
+}
 
 pub fn list_vms() -> Result<Vec<Machine>> {
     let list = vboxhelper::get_vm_list()?;
@@ -30,6 +35,11 @@ pub fn list_vms() -> Result<Vec<Machine>> {
         .map(|(name, _)| Machine { name: name.clone() })
         .collect();
     Ok(vms)
+}
+
+pub enum Image {
+    CoreOS,
+    Ubuntu,
 }
 
 #[derive(Clone)]
@@ -106,19 +116,10 @@ impl Machine {
     }
 
     pub async fn ssh(&self) -> Result<()> {
-        // virtualbox::ssh::connect(id).await
-        Ok(())
+        ssh::connect(2201).await
     }
 
     pub async fn start(&self) -> Result<()> {
-        match self.info()? {
-            None => coreos::import(&self).await?,
-            Some(info) => {
-                let _state = info.get_state()?;
-                //println!("state {}", _state);
-            }
-        };
-
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["startvm", self.as_ref(), "--type", "headless"]);
         let output = cmd.output()?;
