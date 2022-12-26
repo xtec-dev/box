@@ -105,6 +105,11 @@ impl Machine {
         }
     }
 
+    pub async fn ssh(&self) -> Result<()> {
+        // virtualbox::ssh::connect(id).await
+        Ok(())
+    }
+
     pub async fn start(&self) -> Result<()> {
         match self.info()? {
             None => coreos::import(&self).await?,

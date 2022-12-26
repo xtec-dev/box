@@ -1,6 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
-use std::ops::RangeInclusive;
+use clap::{Parser, Subcommand, ValueEnum};
 use tokio::runtime::Runtime;
 use virtualbox::Machine;
 
@@ -15,11 +14,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Unregisters a virtual machine and delete all associated files.
+    /// Create a Virtual Machine.
+    Create {
+        name: String,
+
+        ///
+        #[arg(value_enum,short,long, default_value_t = Provider::VirtualBox)]
+        provider: Provider,
+
+        /// OS
+        #[arg(value_enum, short,long,default_value_t = Image::Ubuntu)]
+        image: Image,
+    },
+
+    /// Delete a VM.
     Delete {
-        /// Virtual machine id, from 1 to 9
-        #[arg(value_parser = id_in_range)]
-        id: u16,
+        /// The name of the Virtual Machine.
+        #[arg()]
+        name: String,
     },
 
     /// Lists all virtual machines currently registered with VirtualBox.
@@ -27,45 +39,62 @@ enum Commands {
 
     /// Start a virtual machine
     SSH {
-        /// Virtual machine id, from 1 to 9
-        #[arg(value_parser = id_in_range)]
-        id: u16,
+        /// The name of the Virtual Machine.
+        #[arg()]
+        name: String,
     },
 
-    /// Start a virtual machine
+    /// Start a stopped VM.
     Start {
-        ///
-        #[arg(short, long)]
-        provider: Option<String>,
-
-        /// Machine id, from 1 to 9
-        #[arg(value_parser = id_in_range)]
-        id: u16,
+        /// The name of the Virtual Machine.
+        #[arg()]
+        name: String,
     },
 
-    /// Stop a virtual machine
+    /// Power off (stop) a running VM.
     Stop {
-        /// Virtual machine id, from 1 to 9
-        #[arg(value_parser = id_in_range)]
-        id: u16,
+        /// The name of the Virtual Machine.
+        #[arg()]
+        name: String,
     },
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Image {
+    /// Ubuntu 22.04
+    Ubuntu,
+    /// CoreOS 37
+    Coreos,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Provider {
+    /// VirtualBox
+    VirtualBox,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Some(Commands::Delete { id }) => delete(*id),
+        Some(Commands::Create {
+            name,
+            provider,
+            image,
+        }) => {
+            println!("{} {:?} {:?}", name, provider, image);
+            Ok(())
+        }
+        Some(Commands::Delete { name }) => delete(name),
         Some(Commands::List {}) => list(),
-        Some(Commands::SSH { id }) => ssh(*id),
-        Some(Commands::Start { provider, id }) => start(*id),
-        Some(Commands::Stop { id }) => stop(*id),
+        Some(Commands::SSH { name }) => ssh(name),
+        Some(Commands::Start { name }) => start(name),
+        Some(Commands::Stop { name }) => stop(name),
         None => Ok(()),
     }
 }
 
-fn delete(id: u16) -> Result<()> {
-    let name = format!("box-{}", id);
-    let machine = Machine::new(name);
+fn delete(name: &String) -> Result<()> {
+    let machine = Machine::new(name.clone());
     let rt = Runtime::new()?;
     rt.block_on(async move {
         if let Err(err) = machine.delete().await {
@@ -85,59 +114,21 @@ fn list() -> Result<()> {
         }
     }
     Ok(())
-
-    /*
-
-     // Get list of all known virtual machines in system
-        let lst = vboxhelper::get_vm_list().expect("Unable to get VM list");
-
-        // Get a HashSet containing all known _running_ virtual machines
-        let running = {
-            let mut set = HashSet::new();
-            for (_, uuid) in vboxhelper::get_running_vms_list().expect("Unable to get VM list") {
-                set.insert(uuid);
-            }
-
-            set
-        };
-
-        // Find the longest virtual machine name, to make make output visually
-        // stunning.
-        let mut max_len = 0;
-        for (nm, _) in &lst {
-            if nm.len() > max_len {
-                max_len = nm.len();
-            }
-        }
-
-        // Display a list of all virtual machines, and marking the running ones.
-        for (nm, uuid) in &lst {
-            let runstate = if running.contains(&uuid) {
-                " [running]"
-            } else {
-                ""
-            };
-
-            println!("{:width$}  {}{}", nm, uuid, runstate, width = max_len);
-        }
-    */
 }
 
-fn ssh(id: u16) -> Result<()> {
-    let name = format!("box-{}", id);
-    let machine = Machine::new(name);
+fn ssh(name: &String) -> Result<()> {
+    let machine = Machine::new(name.clone());
     let rt = Runtime::new()?;
     rt.block_on(async move {
-        if let Err(err) = virtualbox::ssh::connect(id).await {
+        if let Err(err) = machine.ssh().await {
             println!("{}: {}", machine.name, err);
         }
     });
     Ok(())
 }
 
-fn start(id: u16) -> Result<()> {
-    let name = format!("box-{}", id);
-    let machine = Machine::new(name);
+fn start(name: &String) -> Result<()> {
+    let machine = Machine::new(name.clone());
     let rt = Runtime::new()?;
     rt.block_on(async move {
         if let Err(err) = machine.start().await {
@@ -147,9 +138,8 @@ fn start(id: u16) -> Result<()> {
     Ok(())
 }
 
-fn stop(id: u16) -> Result<()> {
-    let name = format!("box-{}", id);
-    let machine = Machine::new(name);
+fn stop(name: &String) -> Result<()> {
+    let machine = Machine::new(name.clone());
     let rt = Runtime::new()?;
     rt.block_on(async move {
         if let Err(err) = machine.stop().await {
@@ -157,21 +147,4 @@ fn stop(id: u16) -> Result<()> {
         }
     });
     Ok(())
-}
-
-const ID_RANGE: RangeInclusive<usize> = 1..=9;
-
-fn id_in_range(s: &str) -> Result<u16, String> {
-    let port: usize = s
-        .parse()
-        .map_err(|_| format!("`{}` isn't a id number", s))?;
-    if ID_RANGE.contains(&port) {
-        Ok(port as u16)
-    } else {
-        Err(format!(
-            "Id not in range {}-{}",
-            ID_RANGE.start(),
-            ID_RANGE.end()
-        ))
-    }
 }
