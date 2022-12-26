@@ -59,7 +59,7 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    ssh::set_port_forward(name)?;
+    ssh::set_port_forward(name).await?;
 
     Ok(())
 }
