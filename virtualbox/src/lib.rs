@@ -53,13 +53,6 @@ impl Display for Machine {
     }
 }
 
-// TODO delete
-impl AsRef<str> for Machine {
-    fn as_ref(&self) -> &str {
-        &self.name
-    }
-}
-
 impl Machine {
     pub fn new(name: String) -> Machine {
         Machine { name }
@@ -67,7 +60,7 @@ impl Machine {
 
     pub fn info(&self) -> Result<MachineInfo> {
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["showvminfo", self.as_ref(), "--machinereadable"]);
+        cmd.args(["showvminfo", &self.name, "--machinereadable"]);
 
         let output = cmd
             .output()
@@ -92,7 +85,7 @@ impl Machine {
 
         println!("{}: delete", self);
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["unregistervm", self.as_ref(), "--delete"]);
+        cmd.args(["unregistervm", &self.name, "--delete"]);
 
         //println!("Starting vm {}", self.name);
 
@@ -114,7 +107,7 @@ impl Machine {
 
     pub async fn start(&self) -> Result<()> {
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["startvm", self.as_ref(), "--type", "headless"]);
+        cmd.args(["startvm", &self.name, "--type", "headless"]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -137,7 +130,7 @@ impl Machine {
         println!("{}: stop", self);
 
         let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["controlvm", self.as_ref(), "acpipowerbutton"]);
+        cmd.args(["controlvm", &self.name, "acpipowerbutton"]);
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 

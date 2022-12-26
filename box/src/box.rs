@@ -113,10 +113,7 @@ fn list() -> Result<()> {
     let vms = virtualbox::list_vms()?;
     for vm in vms {
         let info = vm.info()?;
-        match info {
-            None => println!("{}", vm.name),
-            Some(info) => println!("{} {:?}", vm.name, info.get_state()),
-        }
+        println!("{} {:?}", vm.name, info.state());
     }
     Ok(())
 }
