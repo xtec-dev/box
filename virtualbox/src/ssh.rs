@@ -18,7 +18,11 @@ static KEY_PATH: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 pub fn set_port_forward(name: &str) -> Result<()> {
-    let port = "2201";
+    let port = 2201;
+    for vm in crate::list_vms()? {
+        let _port = vm.info()?.ssh_port()?;
+    }
+
     let rule = format!("ssh,tcp,127.0.0.1,{},,22", port);
 
     let output = Command::new(manage::get_cmd())

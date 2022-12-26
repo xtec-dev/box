@@ -65,15 +65,7 @@ impl Machine {
         Machine { name }
     }
 
-    pub fn id(&self) -> u8 {
-        let regex = Regex::new(r"[a-z]+-([0-9])").unwrap();
-        let caps = regex.captures(&self.name).unwrap();
-        let sid = caps.get(1).unwrap().as_str();
-        let id = sid.parse::<u8>().unwrap();
-        id
-    }
-
-    pub fn info(&self) -> Result<Option<MachineInfo>> {
+    pub fn info(&self) -> Result<MachineInfo> {
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["showvminfo", self.as_ref(), "--machinereadable"]);
 
@@ -83,12 +75,12 @@ impl Machine {
 
         if output.status.success() {
             let configuration = std::str::from_utf8(&output.stdout)?;
-            let info = MachineInfo::parse(configuration);
-            Ok(Some(info))
+            let info = MachineInfo(String::from(configuration));
+            Ok(info)
         } else {
             let error = std::str::from_utf8(&output.stderr)?;
             if error.contains("VBOX_E_OBJECT_NOT_FOUND") {
-                Ok(None)
+                bail!("{} not found", self.name)
             } else {
                 bail!(String::from(error))
             }
@@ -116,7 +108,8 @@ impl Machine {
     }
 
     pub async fn ssh(&self) -> Result<()> {
-        ssh::connect(2201).await
+        let port = self.info()?.ssh_port()?;
+        ssh::connect(port).await
     }
 
     pub async fn start(&self) -> Result<()> {
@@ -135,14 +128,10 @@ impl Machine {
     }
 
     pub async fn stop(&self) -> Result<()> {
-        match self.info()? {
-            None => return Ok(()),
-            Some(info) => {
-                let state = info.get_state()?;
-                if state == MachineState::PowerOff || state == MachineState::Stopping {
-                    return Ok(());
-                }
-            }
+        let info = self.info()?;
+        let state = info.state()?;
+        if state == MachineState::PowerOff || state == MachineState::Stopping {
+            return Ok(());
         }
 
         println!("{}: stop", self);
@@ -161,27 +150,12 @@ impl Machine {
     }
 }
 
-pub struct MachineInfo(HashMap<String, String>);
+pub struct MachineInfo(String);
 
 //https://www.virtualbox.org/manual/ch08.html#vboxmanage-showvminfo
 impl MachineInfo {
-    pub fn get_state(&self) -> Result<MachineState> {
-        let state = match self.0.get("VMState") {
-            None => MachineState::Unknown,
-            Some(s) => match s.as_ref() {
-                "poweroff" => MachineState::PowerOff,
-                "starting" => MachineState::Starting,
-                "running" => MachineState::Running,
-                "paused" => MachineState::Paused,
-                "stopping" => MachineState::Stopping,
-                _ => MachineState::Unknown,
-            },
-        };
-        Ok(state)
-    }
-
     // TODO use pest https://medium.com/code-zen/learn-to-build-a-parser-in-rust-for-fun-and-profit-e22ca0e0ce4c
-    fn parse(str: &str) -> MachineInfo {
+    pub fn map(&self) -> HashMap<String, String> {
         let mut map = HashMap::new();
 
         // Capture foo="bar" -> foo=bar
@@ -191,7 +165,7 @@ impl MachineInfo {
         // foo=bar -> foo=bar
         let re3 = Regex::new(r#"^(?P<key>[^"=]+)=(?P<val>[^"=]*)$"#).unwrap();
 
-        for line in str.split("\n") {
+        for line in self.0.split("\n") {
             if line.len() == 0 {
                 continue;
             }
@@ -211,8 +185,39 @@ impl MachineInfo {
                 map.insert(cap[1].to_string(), cap[2].to_string());
             }
         }
+        map
+    }
 
-        MachineInfo(map)
+    pub fn ssh_port(&self) -> Result<u16> {
+        let regex = Regex::new(r#"^Forwarding.*="ssh.*,(\d*),,22"#).unwrap();
+
+        for line in self.0.split("\n") {
+            if line.len() == 0 {
+                continue;
+            }
+
+            if let Some(caps) = regex.captures(line) {
+                let port = caps[1].parse::<u16>()?;
+                return Ok(port);
+            }
+        }
+
+        bail!("ssh forward port not found")
+    }
+
+    pub fn state(&self) -> Result<MachineState> {
+        let state = match self.map().get("VMState") {
+            None => MachineState::Unknown,
+            Some(s) => match s.as_ref() {
+                "poweroff" => MachineState::PowerOff,
+                "starting" => MachineState::Starting,
+                "running" => MachineState::Running,
+                "paused" => MachineState::Paused,
+                "stopping" => MachineState::Stopping,
+                _ => MachineState::Unknown,
+            },
+        };
+        Ok(state)
     }
 }
 
@@ -245,20 +250,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_machine_id() {
-        let m = Machine::new(String::from("box-2"));
-        assert_eq!(2, m.id())
+    fn info_ssh_port() -> Result<()> {
+        let info = MachineInfo(String::from(
+            r#"name="box"
+nic1="nat"
+nictype1="82540EM"
+Forwarding(0)="http,tcp,127.0.0.1,8080,,80"
+Forwarding(1)="ssh,tcp,127.0.0.1,2206,,22"
+"#,
+        ));
+
+        assert_eq!(2206, info.ssh_port()?);
+        Ok(())
     }
 
     #[test]
-    fn test_machineinfo_parse() {
+    fn info_map() {
         /* error
             r#" VBoxManage: error: Could not find a registered machine named 'xtec-4'
         VBoxManage: error: Details: code VBOX_E_OBJECT_NOT_FOUND (0x80bb0001), component VirtualBoxWrap, interface IVirtualBox, callee nsISupports
         VBoxManage: error: Context: "FindMachine(Bstr(VMNameOrUuid).raw(), machine.asOutParam())" at line 3138 of file VBoxManageInfo.cpp"#,
         ).is_none());*/
 
-        let _info = MachineInfo::parse(
+        let _info = MachineInfo(String::from(
             r#"name="xtec-1"
         Encryption:     disabled
         groups="/"
@@ -397,6 +411,6 @@ mod tests {
         rec_screen_video_fps=25
         GuestMemoryBalloon=0
         "#,
-        );
+        ));
     }
 }
