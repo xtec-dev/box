@@ -1,7 +1,4 @@
-use std::{
-    path::{Path, PathBuf},
-    vec,
-};
+use std::path::Path;
 
 use anyhow::Result;
 use iso::{
@@ -14,11 +11,6 @@ mod iso;
 // https://cloudinit.readthedocs.io/en/latest/topics/examples.html
 // https://gist.github.com/fardjad/a7e634d40f75dc29cff432e7372a1c93
 // https://github.com/marysaka/mkisofs-rs
-
-const META_DATA: &str = r#"local-hostname: box-01
-network-interfaces: |
-  auto enp0s3
-  iface enp0s3 inet dhcp"#;
 
 const USER_DATA: &str = r#"#cloud-config
 users:
@@ -65,6 +57,7 @@ network-interfaces: |
         aligned_size: utils::align_up(metadata.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
     };
     file_entries.push(entry);
+
     let entry = FileEntry {
         name: String::from("user-data"),
         content: String::from(USER_DATA),

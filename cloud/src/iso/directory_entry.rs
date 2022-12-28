@@ -4,8 +4,6 @@ use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_I64, LOGIC_SIZE_U32};
 use byteorder::{BigEndian, ByteOrder, LittleEndian, WriteBytesExt};
 use chrono::prelude::*;
 
-use std::fs;
-use std::fs::DirEntry;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;

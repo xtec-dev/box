@@ -101,11 +101,17 @@ impl Machine {
     }
 
     pub async fn ssh(&self) -> Result<()> {
+        self.start().await?;
         let port = self.info()?.ssh_port()?;
         ssh::connect(port).await
     }
 
     pub async fn start(&self) -> Result<()> {
+        let state = self.info()?.state()?;
+        if state == State::Running || state == State::Starting {
+            return Ok(());
+        }
+
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["startvm", &self.name, "--type", "headless"]);
         let output = cmd.output()?;

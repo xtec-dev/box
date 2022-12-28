@@ -3,7 +3,6 @@ use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
-use std::path::PathBuf;
 
 use crate::iso::directory_entry::DirectoryEntry;
 
