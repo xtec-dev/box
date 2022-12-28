@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use std::process::Command;
 
 use anyhow::Result;
-use cloud::write_seed_iso;
+use cloud::{write_seed_iso, MetaData};
 
 use crate::ova;
 use crate::ssh;
@@ -29,7 +29,12 @@ pub async fn create(name: &str) -> Result<()> {
     io::stdout().write_all(&output.stdout)?;
 
     let seed = BOX_PATH.join("seed.iso");
-    write_seed_iso(&seed)?;
+    write_seed_iso(
+        &seed,
+        MetaData {
+            hostname: String::from(name),
+        },
+    )?;
 
     let output = Command::new(manage::get_cmd())
         .args([

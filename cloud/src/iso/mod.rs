@@ -70,11 +70,7 @@ where
     Ok(())
 }
 
-pub fn create_iso(
-    output: String,
-    input_files: Vec<PathBuf>,
-    entries: Vec<FileEntry>,
-) -> std::io::Result<()> {
+pub fn create_iso(output: String, entries: Vec<FileEntry>) -> std::io::Result<()> {
     let mut volume_descriptor_list = Vec::new();
 
     volume_descriptor_list.push(VolumeDescriptor::Primary);
@@ -91,7 +87,7 @@ pub fn create_iso(
 
     let mut tree = DirectoryEntry::new()?;
 
-    tree.set_path(&input_files, entries)?;
+    tree.set_path(entries)?;
     let mut path_table_index = 0;
 
     let mut tmp_lba = current_lba;

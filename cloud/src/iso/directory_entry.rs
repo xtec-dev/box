@@ -461,24 +461,14 @@ impl DirectoryEntry {
         res
     }
 
-    pub fn set_path(&mut self, path: &[PathBuf], entries: Vec<FileEntry>) -> std::io::Result<()> {
+    pub fn set_path(&mut self, entries: Vec<FileEntry>) -> std::io::Result<()> {
         let mut files_childs: Vec<FileEntry> = Vec::new();
-
-        let mut ordered_dir: Vec<DirEntry> = path
-            .iter()
-            .flat_map(|path| {
-                let res: Vec<DirEntry> = fs::read_dir(path).unwrap().map(|r| r.unwrap()).collect();
-                res
-            })
-            .collect();
-
-        ordered_dir.sort_by_key(|dir| dir.path());
 
         for entry in entries {
             files_childs.push(entry);
         }
 
-        self.path = path[0].clone();
+        self.path = PathBuf::from("/todo");
         self.files_childs.append(&mut files_childs);
         Ok(())
     }

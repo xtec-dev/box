@@ -41,19 +41,28 @@ write_files:
         config: disabled
 "#;
 
-pub fn write_seed_iso(output: &Path) -> Result<()> {
-    let path = PathBuf::from("/home/david/workspace/box/cloud/src/iso/seed");
+pub struct MetaData {
+    pub hostname: String,
+}
 
+pub fn write_seed_iso(output: &Path, metadata: MetaData) -> Result<()> {
     let output = String::from(output.to_str().unwrap());
-    let input_files = vec![path];
+
+    let metadata = format!(
+        r#"local-hostname: {}
+network-interfaces: |
+  auto enp0s3
+  iface enp0s3 inet dhcp"#,
+        metadata.hostname
+    );
 
     let mut file_entries = Vec::new();
     let entry = FileEntry {
         name: String::from("meta-data"),
-        content: String::from(META_DATA),
-        size: META_DATA.len() as usize,
+        content: String::from(&metadata),
+        size: metadata.len() as usize,
         lba: 0,
-        aligned_size: utils::align_up(META_DATA.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
+        aligned_size: utils::align_up(metadata.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
     };
     file_entries.push(entry);
     let entry = FileEntry {
@@ -65,21 +74,20 @@ pub fn write_seed_iso(output: &Path) -> Result<()> {
     };
     file_entries.push(entry);
 
-    iso::create_iso(output, input_files, file_entries)?;
+    iso::create_iso(output, file_entries)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
 
-    use super::*;
     use anyhow::Result;
 
     #[ignore]
     #[test]
     fn test_write_seed_iso() -> Result<()> {
-        let output = Path::new("/home/david/workspace/box/virtualbox/init/seed.iso");
-        write_seed_iso(&output)?;
+        //let output = Path::new("/home/david/workspace/box/virtualbox/init/seed.iso");
+        //write_seed_iso(&output)?;
         Ok(())
     }
 }
