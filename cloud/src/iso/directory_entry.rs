@@ -6,7 +6,6 @@ use chrono::prelude::*;
 
 use std::fs;
 use std::fs::DirEntry;
-use std::fs::Metadata;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
@@ -462,7 +461,7 @@ impl DirectoryEntry {
         res
     }
 
-    pub fn set_path(&mut self, path: &[PathBuf]) -> std::io::Result<()> {
+    pub fn set_path(&mut self, path: &[PathBuf], entries: Vec<FileEntry>) -> std::io::Result<()> {
         let mut files_childs: Vec<FileEntry> = Vec::new();
 
         let mut ordered_dir: Vec<DirEntry> = path
@@ -475,17 +474,8 @@ impl DirectoryEntry {
 
         ordered_dir.sort_by_key(|dir| dir.path());
 
-        for entry in ordered_dir {
-            let entry_meta: Metadata = entry.metadata()?;
-            if entry_meta.is_file() {
-                files_childs.push(FileEntry {
-                    path: entry.path(),
-                    size: entry_meta.len() as usize,
-                    lba: 0,
-                    aligned_size: utils::align_up(entry_meta.len() as i32, LOGIC_SIZE_U32 as i32)
-                        as usize,
-                })
-            }
+        for entry in entries {
+            files_childs.push(entry);
         }
 
         self.path = path[0].clone();

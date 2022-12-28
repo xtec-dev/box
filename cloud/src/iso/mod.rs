@@ -1,19 +1,21 @@
-#[macro_use]
-mod utils;
-mod directory_entry;
-mod file_entry;
-mod volume_descriptor;
-
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 
-use crate::iso::directory_entry::DirectoryEntry;
-
-use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_U32};
-use crate::iso::volume_descriptor::VolumeDescriptor;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::path::PathBuf;
+
+use crate::iso::directory_entry::DirectoryEntry;
+
+use crate::iso::file_entry::FileEntry;
+use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_U32};
+use crate::iso::volume_descriptor::VolumeDescriptor;
+
+#[macro_use]
+pub mod utils;
+mod directory_entry;
+pub mod file_entry;
+mod volume_descriptor;
 
 fn assign_directory_identifiers(
     tree: &mut DirectoryEntry,
@@ -68,7 +70,11 @@ where
     Ok(())
 }
 
-pub fn create_iso(output: String, input_files: Vec<PathBuf>) -> std::io::Result<()> {
+pub fn create_iso(
+    output: String,
+    input_files: Vec<PathBuf>,
+    entries: Vec<FileEntry>,
+) -> std::io::Result<()> {
     let mut volume_descriptor_list = Vec::new();
 
     volume_descriptor_list.push(VolumeDescriptor::Primary);
@@ -85,7 +91,7 @@ pub fn create_iso(output: String, input_files: Vec<PathBuf>) -> std::io::Result<
 
     let mut tree = DirectoryEntry::new()?;
 
-    tree.set_path(&input_files)?;
+    tree.set_path(&input_files, entries)?;
     let mut path_table_index = 0;
 
     let mut tmp_lba = current_lba;

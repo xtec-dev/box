@@ -4,15 +4,14 @@ use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_I64, LOGIC_SIZE_U32};
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use chrono::prelude::*;
 
-use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::io::SeekFrom;
-use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct FileEntry {
-    pub path: PathBuf,
+    pub name: String,
+    pub content: String,
     pub size: usize,
     pub lba: u32,
     pub aligned_size: usize,
@@ -20,11 +19,7 @@ pub struct FileEntry {
 
 impl FileEntry {
     pub fn get_file_name(&self) -> String {
-        self.path.file_name().unwrap().to_str().unwrap().to_string()
-    }
-
-    pub fn open_content_provider(&self) -> Box<dyn Read> {
-        Box::new(File::open(&self.path).unwrap())
+        self.name.clone()
     }
 
     pub fn write_entry<T>(&self, output_writter: &mut T) -> std::io::Result<()>
@@ -153,8 +148,8 @@ impl FileEntry {
         // Seek to the correct LBA
         output_writter.seek(SeekFrom::Start(u64::from(self.lba * LOGIC_SIZE_U32)))?;
 
-        let mut file: Box<dyn Read> = self.open_content_provider();
-        io::copy(&mut file, output_writter)?;
+        let mut bytes = self.content.as_bytes();
+        io::copy(&mut bytes, output_writter)?;
 
         let current_pos = output_writter.seek(SeekFrom::Current(0))? as usize;
         let expected_aligned_pos = ((current_pos as i64) & -LOGIC_SIZE_I64) as usize;
