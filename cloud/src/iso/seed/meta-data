@@ -1,4 +1,4 @@
-local-hostname: boxedddd
+local-hostname: box-1
 network-interfaces: |
   auto enp0s3
   iface enp0s3 inet dhcp

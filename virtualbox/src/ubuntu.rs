@@ -1,9 +1,8 @@
-use anyhow::Result;
 use std::io::{self, Write};
-use std::path::Path;
 use std::process::Command;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncWriteExt;
+
+use anyhow::Result;
+use cloud::write_seed_iso;
 
 use crate::ova;
 use crate::ssh;
@@ -16,8 +15,6 @@ use crate::{manage, BOX_PATH};
 
 const UBUNTU_URL: &str =
     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova";
-
-const SEED_ISO: &[u8] = include_bytes!("../init/seed.iso");
 
 pub async fn create(name: &str) -> Result<()> {
     let ova_path = ova::get("ubuntu-22_04", UBUNTU_URL).await?;
@@ -32,7 +29,7 @@ pub async fn create(name: &str) -> Result<()> {
     io::stdout().write_all(&output.stdout)?;
 
     let seed = BOX_PATH.join("seed.iso");
-    write_seed_iso(&seed).await?;
+    write_seed_iso(&seed)?;
 
     let output = Command::new(manage::get_cmd())
         .args([
@@ -60,18 +57,6 @@ pub async fn create(name: &str) -> Result<()> {
     io::stdout().write_all(&output.stdout)?;
 
     ssh::set_port_forward(name).await?;
-
-    Ok(())
-}
-
-async fn write_seed_iso(path: &Path) -> Result<()> {
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&path)
-        .await?;
-    file.write_all(SEED_ISO).await?;
 
     Ok(())
 }
