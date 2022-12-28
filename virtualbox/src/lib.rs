@@ -6,6 +6,7 @@ use std::fmt::Display;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::Duration;
 
 use regex::Regex;
 
@@ -88,8 +89,6 @@ impl Machine {
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["unregistervm", &self.name, "--delete"]);
 
-        //println!("Starting vm {}", self.name);
-
         let output = cmd.output()?;
         io::stdout().write_all(&output.stdout)?;
 
@@ -122,25 +121,33 @@ impl Machine {
     }
 
     pub async fn stop(&self) -> Result<()> {
-        let info = self.info()?;
-        let state = info.state()?;
-        if state == State::PowerOff || state == State::Stopping {
+        let mut state = self.info()?.state()?;
+        if state == State::PowerOff {
             return Ok(());
         }
 
-        println!("{}: stop", self);
+        print!("{}: stopping ", self);
 
-        let mut cmd = Command::new(manage::get_cmd());
-        cmd.args(["controlvm", &self.name, "acpipowerbutton"]);
-        let output = cmd.output()?;
-        io::stdout().write_all(&output.stdout)?;
+        while state != State::PowerOff {
+            if state != State::Stopping {
+                let mut cmd = Command::new(manage::get_cmd());
+                cmd.args(["controlvm", &self.name, "acpipowerbutton"]);
+                let output = cmd.output()?;
+                io::stdout().write_all(&output.stdout)?;
 
-        if output.status.success() {
-            Ok(())
-        } else {
-            let msg = String::from_utf8(output.stderr)?;
-            bail!(format!("stop:{:?}", msg))
+                if !output.status.success() {
+                    let msg = String::from_utf8(output.stderr)?;
+                    bail!(format!("stop:{:?}", msg))
+                };
+            }
+
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            print!(".");
+            state = self.info()?.state()?;
         }
+        println!("");
+
+        Ok(())
     }
 }
 
