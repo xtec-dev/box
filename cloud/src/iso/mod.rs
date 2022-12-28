@@ -2,7 +2,6 @@
 mod utils;
 mod directory_entry;
 mod file_entry;
-pub mod option;
 mod volume_descriptor;
 
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
@@ -14,6 +13,7 @@ use crate::iso::volume_descriptor::VolumeDescriptor;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
+use std::path::PathBuf;
 
 fn assign_directory_identifiers(
     tree: &mut DirectoryEntry,
@@ -47,7 +47,6 @@ fn reserve_file_space(directory_entry: &mut DirectoryEntry, current_lba: &mut u3
 fn write_system_area<T>(
     _tree: &mut DirectoryEntry,
     output_writter: &mut T,
-    _opt: &option::Opt,
     _lb_count: u32,
 ) -> std::io::Result<()>
 where
@@ -69,13 +68,13 @@ where
     Ok(())
 }
 
-pub fn create_iso(opt: &mut option::Opt) -> std::io::Result<()> {
+pub fn create_iso(output: String, input_files: Vec<PathBuf>) -> std::io::Result<()> {
     let mut volume_descriptor_list = Vec::new();
 
     volume_descriptor_list.push(VolumeDescriptor::Primary);
     volume_descriptor_list.push(VolumeDescriptor::End);
 
-    let mut out_file = File::create(&opt.output)?;
+    let mut out_file = File::create(&output)?;
 
     let mut current_lba: u32 = 0x10 + 1 + (volume_descriptor_list.len() as u32);
 
@@ -86,7 +85,7 @@ pub fn create_iso(opt: &mut option::Opt) -> std::io::Result<()> {
 
     let mut tree = DirectoryEntry::new()?;
 
-    tree.set_path(&opt.input_files)?;
+    tree.set_path(&input_files)?;
     let mut path_table_index = 0;
 
     let mut tmp_lba = current_lba;
@@ -115,7 +114,7 @@ pub fn create_iso(opt: &mut option::Opt) -> std::io::Result<()> {
 
     reserve_file_space(&mut tree, &mut current_lba);
 
-    write_system_area(&mut tree, &mut out_file, opt, current_lba)?;
+    write_system_area(&mut tree, &mut out_file, current_lba)?;
 
     for mut volume in volume_descriptor_list {
         volume.write_volume(&mut out_file, &mut tree, path_table_start_lba, current_lba)?;

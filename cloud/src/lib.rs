@@ -24,12 +24,10 @@ pub fn write_seed_iso(output: &Path) -> Result<()> {
        file.write_all(SEED_ISO).await?;
     */
 
-    let mut opt = iso::option::Opt {
-        output: String::from(output.to_str().unwrap()),
-        input_files: vec![path],
-    };
+    let output = String::from(output.to_str().unwrap());
+    let input_files = vec![path];
 
-    iso::create_iso(&mut opt)?;
+    iso::create_iso(output, input_files)?;
     Ok(())
 }
 
