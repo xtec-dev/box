@@ -230,10 +230,6 @@ impl DirectoryEntry {
         utils::get_entry_size(0x21, file_name, directory_type.unwrap_or(0), 1)
     }
 
-    pub fn get_file_name(&self) -> String {
-        self.path.file_name().unwrap().to_str().unwrap().to_string()
-    }
-
     fn write_path_table_entry<T, Order: ByteOrder>(
         directory_entry: &DirectoryEntry,
         output_writter: &mut T,
@@ -267,16 +263,6 @@ impl DirectoryEntry {
         Ok(())
     }
 
-    fn write_path_table_childs<T, Order: ByteOrder>(
-        &mut self,
-        output_writter: &mut T,
-    ) -> std::io::Result<()>
-    where
-        T: Write,
-    {
-        Ok(())
-    }
-
     pub fn write_path_table<T, Order: ByteOrder>(
         &mut self,
         output_writter: &mut T,
@@ -294,8 +280,6 @@ impl DirectoryEntry {
 
         // Write root
         DirectoryEntry::write_path_table_entry::<T, Order>(self, output_writter, 1)?;
-
-        self.write_path_table_childs::<T, Order>(output_writter)?;
 
         // Pad to LBA size
         let current_pos = output_writter.seek(SeekFrom::Current(0))? as usize;
@@ -353,9 +337,6 @@ impl DirectoryEntry {
 
         parent.write_as_parent(output_writter)?;
 
-        // FIXME: dirty
-        let self_clone = self.clone();
-
         for child_file in &mut self.files_childs {
             child_file.write_entry(output_writter)?;
         }
@@ -408,13 +389,6 @@ impl DirectoryEntry {
         DirectoryEntry::write_entry(self, output_writter, 2)
     }
 
-    fn write_one<T>(&self, output_writter: &mut T) -> std::io::Result<()>
-    where
-        T: Write + Seek,
-    {
-        DirectoryEntry::write_entry(self, output_writter, 0)
-    }
-
     fn write_continuation_area<T>(&self, output_writter: &mut T) -> std::io::Result<()>
     where
         T: Write + Seek,
@@ -450,10 +424,8 @@ impl DirectoryEntry {
         Ok(())
     }
 
-    pub fn get_directory(&mut self, dir_name: &str) -> Option<&mut DirectoryEntry> {
-        let mut res = None;
-
-        res
+    pub fn get_directory(&mut self, _dir_name: &str) -> Option<&mut DirectoryEntry> {
+        None
     }
 
     pub fn get_file(&mut self, path: &str) -> Option<&mut FileEntry> {
@@ -488,11 +460,6 @@ impl DirectoryEntry {
         }
 
         res
-    }
-
-    pub fn add_file(&mut self, file: FileEntry) -> &FileEntry {
-        self.files_childs.push(file);
-        self.files_childs.last().unwrap()
     }
 
     pub fn set_path(&mut self, path: &[PathBuf]) -> std::io::Result<()> {

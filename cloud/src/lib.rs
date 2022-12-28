@@ -26,17 +26,6 @@ pub fn write_seed_iso(output: &Path) -> Result<()> {
 
     let mut opt = iso::option::Opt {
         output: String::from(output.to_str().unwrap()),
-        eltorito_opt: iso::option::ElToritoOpt {
-            eltorito_boot: None,
-            no_emu_boot: false,
-            no_boot: false,
-            boot_info_table: false,
-            grub2_boot_info: false,
-        },
-        embedded_boot: None,
-        grub2_mbr: None,
-        boot_load_size: 4,
-        protective_msdos_label: false,
         input_files: vec![path],
     };
 
