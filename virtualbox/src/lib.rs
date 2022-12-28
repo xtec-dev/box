@@ -124,7 +124,7 @@ impl Machine {
     pub async fn stop(&self) -> Result<()> {
         let info = self.info()?;
         let state = info.state()?;
-        if state == MachineState::PowerOff || state == MachineState::Stopping {
+        if state == State::PowerOff || state == State::Stopping {
             return Ok(());
         }
 
@@ -183,6 +183,7 @@ impl MachineInfo {
     }
 
     pub fn ssh_port(&self) -> Result<u16> {
+        // Forwarding(1)="ssh,tcp,127.0.0.1,2206,,22"
         let regex = Regex::new(r#"^Forwarding.*="ssh.*,(\d*),,22"#).unwrap();
 
         for line in self.0.split("\n") {
@@ -199,24 +200,35 @@ impl MachineInfo {
         bail!("ssh forward port not found")
     }
 
-    pub fn state(&self) -> Result<MachineState> {
-        let state = match self.map().get("VMState") {
-            None => MachineState::Unknown,
-            Some(s) => match s.as_ref() {
-                "poweroff" => MachineState::PowerOff,
-                "starting" => MachineState::Starting,
-                "running" => MachineState::Running,
-                "paused" => MachineState::Paused,
-                "stopping" => MachineState::Stopping,
-                _ => MachineState::Unknown,
-            },
-        };
-        Ok(state)
+    pub fn state(&self) -> Result<State> {
+        // VMState="poweroff"
+        let regex = Regex::new(r#"^VMState="(\w*)"$"#).unwrap();
+
+        for line in self.0.split("\n") {
+            if line.len() == 0 {
+                continue;
+            }
+
+            if let Some(caps) = regex.captures(line) {
+                let state = caps[1].parse::<String>()?;
+                let state = match state.as_str() {
+                    "poweroff" => State::PowerOff,
+                    "starting" => State::Starting,
+                    "running" => State::Running,
+                    "paused" => State::Paused,
+                    "stopping" => State::Stopping,
+                    _ => bail!("unknown state {}", state),
+                };
+                return Ok(state);
+            }
+        }
+
+        bail!("VMState property not found")
     }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum MachineState {
+pub enum State {
     Unknown, // TODO remove
     PowerOff,
     Starting,
@@ -225,15 +237,15 @@ pub enum MachineState {
     Stopping,
 }
 
-impl std::fmt::Display for MachineState {
+impl std::fmt::Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            MachineState::Unknown => write!(f, "unknown"),
-            MachineState::PowerOff => write!(f, "poweroff"),
-            MachineState::Starting => write!(f, "starting"),
-            MachineState::Running => write!(f, "running"),
-            MachineState::Paused => write!(f, "paused"),
-            MachineState::Stopping => write!(f, "stopping"),
+            State::Unknown => write!(f, "unknown"),
+            State::PowerOff => write!(f, "poweroff"),
+            State::Starting => write!(f, "starting"),
+            State::Running => write!(f, "running"),
+            State::Paused => write!(f, "paused"),
+            State::Stopping => write!(f, "stopping"),
         }
     }
 }

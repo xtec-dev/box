@@ -10,6 +10,7 @@ path = "src/box.rs"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
+comfy-table = "6.1"
 hcloud = { version = "*", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1.11", features = ["macros", "rt-multi-thread"] }
 virtualbox = { path = "../virtualbox" }

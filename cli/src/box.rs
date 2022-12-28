@@ -1,5 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
+use comfy_table::modifiers::UTF8_ROUND_CORNERS;
+use comfy_table::presets::UTF8_FULL;
+use comfy_table::{ContentArrangement, Table};
 use virtualbox::Machine;
 
 #[derive(Parser)]
@@ -110,11 +113,27 @@ async fn delete(name: &String) -> Result<()> {
 }
 
 fn list() -> Result<()> {
-    let vms = virtualbox::list_vms()?;
+    let mut vms = virtualbox::list_vms()?;
+    vms.sort_by(|a, b| a.name.cmp(&b.name));
+
+    let mut table = Table::new();
+    table
+        .load_preset(UTF8_FULL)
+        .apply_modifier(UTF8_ROUND_CORNERS)
+        .set_content_arrangement(ContentArrangement::Dynamic);
+    table.set_header(vec!["Name", "Status"]);
+
     for vm in vms {
         let info = vm.info()?;
-        println!("{} {:?}", vm.name, info.state());
+        let state = match info.state() {
+            Ok(state) => state.to_string(),
+            Err(err) => format!("error: {}", err),
+        };
+        table.add_row(vec![vm.name, state]);
     }
+
+    println!("{table}");
+
     Ok(())
 }
 
