@@ -1,4 +1,4 @@
-use crate::iso::file_entry::{FileEntry, FileType};
+use crate::iso::file_entry::FileEntry;
 use crate::iso::utils;
 use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_I64, LOGIC_SIZE_U32};
 use byteorder::{BigEndian, ByteOrder, LittleEndian, WriteBytesExt};
@@ -495,30 +495,7 @@ impl DirectoryEntry {
         self.files_childs.last().unwrap()
     }
 
-    fn add_and_merge_childs_directories(
-        dir_childs: &mut Vec<DirectoryEntry>,
-        other: DirectoryEntry,
-    ) {
-        let mut new_entry = other;
-        let optinal_present_entry: Option<&mut DirectoryEntry> = dir_childs
-            .iter_mut()
-            .filter(|in_entry| in_entry.get_file_name() == new_entry.get_file_name())
-            .last();
-
-        if let Some(present_entry) = optinal_present_entry {
-            present_entry
-                .files_childs
-                .append(&mut new_entry.files_childs);
-            present_entry.merge_child_directories(new_entry);
-        } else {
-            dir_childs.push(new_entry);
-        }
-    }
-
-    fn merge_child_directories(&mut self, other: DirectoryEntry) {}
-
     pub fn set_path(&mut self, path: &[PathBuf]) -> std::io::Result<()> {
-        let mut dir_childs: Vec<DirectoryEntry> = Vec::new();
         let mut files_childs: Vec<FileEntry> = Vec::new();
 
         let mut ordered_dir: Vec<DirEntry> = path
@@ -533,14 +510,9 @@ impl DirectoryEntry {
 
         for entry in ordered_dir {
             let entry_meta: Metadata = entry.metadata()?;
-            if entry_meta.is_dir() {
-                let path_list: Vec<PathBuf> = vec![entry.path()];
-                let mut new_dir = DirectoryEntry::new()?;
-                new_dir.set_path(&path_list)?;
-                DirectoryEntry::add_and_merge_childs_directories(&mut dir_childs, new_dir);
-            } else if entry_meta.is_file() {
+            if entry_meta.is_file() {
                 files_childs.push(FileEntry {
-                    file_type: FileType::Regular { path: entry.path() },
+                    path: entry.path(),
                     size: entry_meta.len() as usize,
                     lba: 0,
                     aligned_size: utils::align_up(entry_meta.len() as i32, LOGIC_SIZE_U32 as i32)

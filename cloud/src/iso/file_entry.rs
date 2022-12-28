@@ -7,19 +7,12 @@ use chrono::prelude::*;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
-use std::io::Cursor;
 use std::io::SeekFrom;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
-pub enum FileType {
-    Regular { path: PathBuf },
-    Buffer { name: String, data: Vec<u8> },
-}
-
-#[derive(Debug, Clone)]
 pub struct FileEntry {
-    pub file_type: FileType,
+    pub path: PathBuf,
     pub size: usize,
     pub lba: u32,
     pub aligned_size: usize,
@@ -27,17 +20,11 @@ pub struct FileEntry {
 
 impl FileEntry {
     pub fn get_file_name(&self) -> String {
-        match &self.file_type {
-            FileType::Regular { path } => path.file_name().unwrap().to_str().unwrap().to_string(),
-            FileType::Buffer { name, .. } => name.clone(),
-        }
+        self.path.file_name().unwrap().to_str().unwrap().to_string()
     }
 
     pub fn open_content_provider(&self) -> Box<dyn Read> {
-        match &self.file_type {
-            FileType::Regular { path } => Box::new(File::open(path).unwrap()),
-            FileType::Buffer { data, .. } => Box::new(Cursor::new(data.clone())),
-        }
+        Box::new(File::open(&self.path).unwrap())
     }
 
     pub fn write_entry<T>(&self, output_writter: &mut T) -> std::io::Result<()>
@@ -157,17 +144,6 @@ impl FileEntry {
         utils::get_entry_size(0x21 + 2, &file_name, 0, 1)
     }
 
-    pub fn update(&mut self) {
-        match &self.file_type {
-            FileType::Buffer { data, .. } => {
-                self.size = data.len();
-                self.aligned_size =
-                    utils::align_up(self.size as i32, LOGIC_SIZE_U32 as i32) as usize;
-            }
-            _ => unimplemented!(),
-        }
-    }
-
     pub fn write_content<T>(&mut self, output_writter: &mut T) -> std::io::Result<()>
     where
         T: Write + Seek,
@@ -194,17 +170,5 @@ impl FileEntry {
         output_writter.seek(SeekFrom::Start(old_pos))?;
 
         Ok(())
-    }
-
-    pub fn new_buffered(name: String) -> FileEntry {
-        FileEntry {
-            file_type: FileType::Buffer {
-                name,
-                data: Vec::new(),
-            },
-            lba: 0,
-            size: 0,
-            aligned_size: 0,
-        }
     }
 }

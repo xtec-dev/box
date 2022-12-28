@@ -8,7 +8,7 @@ mod volume_descriptor;
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 
 use crate::iso::directory_entry::DirectoryEntry;
-use crate::iso::file_entry::{FileEntry, FileType};
+use crate::iso::file_entry::FileEntry;
 use crate::iso::utils::SECTOR_SIZE;
 use crate::iso::utils::{LOGIC_SIZE, LOGIC_SIZE_U32};
 use crate::iso::volume_descriptor::VolumeDescriptor;
@@ -58,11 +58,6 @@ fn generate_volume_descriptors(opt: &option::Opt) -> Vec<VolumeDescriptor> {
     res.push(VolumeDescriptor::End);
 
     res
-}
-
-fn create_boot_catalog(tree: &mut DirectoryEntry) {
-    let catalog_file = FileEntry::new_buffered(String::from("boot.catalog"));
-    tree.add_file(catalog_file);
 }
 
 fn fill_boot_catalog(tree: &mut DirectoryEntry, opt: &mut option::Opt) -> std::io::Result<()> {
@@ -124,15 +119,6 @@ fn fill_boot_catalog(tree: &mut DirectoryEntry, opt: &mut option::Opt) -> std::i
     // Unused
     buff.write_all(&unused)?;
 
-    file.file_type = match &file.file_type {
-        FileType::Buffer { name, .. } => FileType::Buffer {
-            name: name.clone(),
-            data: buff,
-        },
-        _ => panic!(),
-    };
-    file.update();
-
     Ok(())
 }
 
@@ -168,12 +154,6 @@ fn patch_boot_image(tree: &mut DirectoryEntry, opt: &mut option::Opt) -> std::io
         buff.seek(SeekFrom::Start(0x9f4))?;
         buff.write_u64::<LittleEndian>(u64::from(file.lba * 4 + 5))?;
     }
-
-    file.file_type = FileType::Buffer {
-        name: file.get_file_name(),
-        data: buff.into_inner(),
-    };
-    file.update();
 
     Ok(())
 }
@@ -297,10 +277,6 @@ pub fn create_iso(opt: &mut option::Opt) -> std::io::Result<()> {
     current_lba += 4;
 
     let mut tree = DirectoryEntry::new()?;
-
-    if opt.eltorito_opt.eltorito_boot.is_some() {
-        create_boot_catalog(&mut tree);
-    }
 
     tree.set_path(&opt.input_files)?;
     let mut path_table_index = 0;
