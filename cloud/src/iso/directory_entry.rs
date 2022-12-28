@@ -17,7 +17,6 @@ pub struct DirectoryEntry {
     pub path_table_index: u32,
     pub parent_index: u32,
     pub path: PathBuf,
-    pub dir_childs: Vec<DirectoryEntry>,
     pub files_childs: Vec<FileEntry>,
     pub continuation_area: Option<Vec<u8>>,
     pub lba: u32,
@@ -199,10 +198,6 @@ impl DirectoryEntry {
 
         res += utils::get_entry_size(0x8, file_name, directory_type, 0);
 
-        for entry in &self.dir_childs {
-            res += entry.get_path_table_size();
-        }
-
         res
     }
 
@@ -212,19 +207,6 @@ impl DirectoryEntry {
 
         size += self.get_entry_size(Some(3)); // '.'
         size += self.get_entry_size(Some(2)); // '..'
-
-        for entry in &self.dir_childs {
-            let entry_size = entry.get_entry_size(Some(0)) as i32;
-            let expected_aligned_size = utils::align_up(size as i32, LOGIC_SIZE_U32 as i32);
-            let available_size_in_lb = expected_aligned_size - size as i32;
-
-            if entry_size > available_size_in_lb && available_size_in_lb != 0 {
-                size = 0;
-                res += 1;
-            }
-
-            size += entry_size as u32;
-        }
 
         for entry in &self.files_childs {
             let entry_size = entry.get_entry_size() as i32;
@@ -292,14 +274,6 @@ impl DirectoryEntry {
     where
         T: Write,
     {
-        for entry in &mut self.dir_childs {
-            DirectoryEntry::write_path_table_entry::<T, Order>(entry, output_writter, 0)?;
-        }
-
-        for entry in &mut self.dir_childs {
-            entry.write_path_table_childs::<T, Order>(output_writter)?;
-        }
-
         Ok(())
     }
 
@@ -367,7 +341,6 @@ impl DirectoryEntry {
             path_table_index: 0,
             parent_index: 0,
             path: empty_parent_path,
-            dir_childs: Vec::new(),
             files_childs: Vec::new(),
             lba: self.lba,
             continuation_area: None,
@@ -382,11 +355,6 @@ impl DirectoryEntry {
 
         // FIXME: dirty
         let self_clone = self.clone();
-
-        for child_directory in &mut self.dir_childs {
-            child_directory.write_one(output_writter)?;
-            child_directory.write_extent(output_writter, Some(&self_clone))?;
-        }
 
         for child_file in &mut self.files_childs {
             child_file.write_entry(output_writter)?;
@@ -416,10 +384,6 @@ impl DirectoryEntry {
     where
         T: Write + Seek,
     {
-        for child_directory in &mut self.dir_childs {
-            child_directory.write_files(output_writter)?;
-        }
-
         for child_file in &mut self.files_childs {
             child_file.write_content(output_writter)?;
         }
@@ -489,14 +453,6 @@ impl DirectoryEntry {
     pub fn get_directory(&mut self, dir_name: &str) -> Option<&mut DirectoryEntry> {
         let mut res = None;
 
-        for child in &mut self.dir_childs {
-            let file_name = child.path.file_name().unwrap().to_str().unwrap();
-
-            if file_name == dir_name {
-                res = Some(child);
-                break;
-            }
-        }
         res
     }
 
@@ -559,21 +515,7 @@ impl DirectoryEntry {
         }
     }
 
-    fn merge_child_directories(&mut self, other: DirectoryEntry) {
-        for mut child in other.dir_childs {
-            let vec = &mut self.dir_childs;
-            let optinal_present_entry: Option<&mut DirectoryEntry> = vec
-                .iter_mut()
-                .filter(|in_entry| in_entry.get_file_name() == child.get_file_name())
-                .last();
-            if let Some(present_entry) = optinal_present_entry {
-                present_entry.files_childs.append(&mut child.files_childs);
-                present_entry.merge_child_directories(child);
-            } else {
-                self.dir_childs.push(child);
-            }
-        }
-    }
+    fn merge_child_directories(&mut self, other: DirectoryEntry) {}
 
     pub fn set_path(&mut self, path: &[PathBuf]) -> std::io::Result<()> {
         let mut dir_childs: Vec<DirectoryEntry> = Vec::new();
@@ -608,7 +550,6 @@ impl DirectoryEntry {
         }
 
         self.path = path[0].clone();
-        self.dir_childs.append(&mut dir_childs);
         self.files_childs.append(&mut files_childs);
         Ok(())
     }
@@ -618,7 +559,6 @@ impl DirectoryEntry {
             path_table_index: 0,
             parent_index: 0,
             path: PathBuf::new(),
-            dir_childs: Vec::new(),
             files_childs: Vec::new(),
             lba: 0,
             continuation_area: None,

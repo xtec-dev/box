@@ -38,17 +38,6 @@ fn assign_directory_identifiers(
         tree.lba = *last_lba;
     }
     *last_lba += tree.get_extent_size_in_lb();
-
-    for entry in &mut tree.dir_childs {
-        entry.parent_index = tree.path_table_index;
-        entry.path_table_index = *last_index + 1;
-
-        *last_index = entry.path_table_index;
-    }
-
-    for entry in &mut tree.dir_childs {
-        assign_directory_identifiers(entry, last_index, last_lba);
-    }
 }
 
 fn reserve_file_space(directory_entry: &mut DirectoryEntry, current_lba: &mut u32) {
@@ -56,10 +45,6 @@ fn reserve_file_space(directory_entry: &mut DirectoryEntry, current_lba: &mut u3
         let lba_count = ((child_file.size as u32) + LOGIC_SIZE_U32) / LOGIC_SIZE_U32;
         child_file.lba = *current_lba;
         *current_lba += lba_count;
-    }
-
-    for child_directory in &mut directory_entry.dir_childs {
-        reserve_file_space(child_directory, current_lba);
     }
 }
 
