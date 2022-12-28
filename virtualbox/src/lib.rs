@@ -18,6 +18,7 @@ mod ssh;
 mod ubuntu;
 
 // https://www.virtualbox.org/manual/ch08.html
+// https://www.youtube.com/watch?v=eS_7WOnP2rs
 
 static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
 

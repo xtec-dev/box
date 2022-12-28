@@ -17,7 +17,7 @@ use crate::{manage, BOX_PATH};
 const UBUNTU_URL: &str =
     "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova";
 
-const INIT_ISO: &[u8] = include_bytes!("../init/init.iso");
+const SEED_ISO: &[u8] = include_bytes!("../init/seed.iso");
 
 pub async fn create(name: &str) -> Result<()> {
     let ova_path = ova::get("ubuntu-22_04", UBUNTU_URL).await?;
@@ -31,8 +31,8 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let init = BOX_PATH.join("init.iso");
-    make_init(&init).await?;
+    let seed = BOX_PATH.join("seed.iso");
+    write_seed_iso(&seed).await?;
 
     let output = Command::new(manage::get_cmd())
         .args([
@@ -48,7 +48,7 @@ pub async fn create(name: &str) -> Result<()> {
             "dvddrive",
             "--medium",
         ])
-        .arg(init.to_path_buf())
+        .arg(seed.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
@@ -64,14 +64,14 @@ pub async fn create(name: &str) -> Result<()> {
     Ok(())
 }
 
-async fn make_init(path: &Path) -> Result<()> {
+async fn write_seed_iso(path: &Path) -> Result<()> {
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
         .open(&path)
         .await?;
-    file.write_all(INIT_ISO).await?;
+    file.write_all(SEED_ISO).await?;
 
     Ok(())
 }
