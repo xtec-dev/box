@@ -74,23 +74,23 @@ pub async fn connect(port: u16) -> Result<()> {
 }
 
 pub async fn public_key() -> Result<String> {
-    if !KEY_PATH.exists() {
+    //if !KEY_PATH.exists() {
         let key: &str = r#"-----BEGIN OPENSSH PRIVATE KEY-----
-        b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-        QyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VAAAAIi6f7S0un+0
-        tAAAAAtzc2gtZWQyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VA
-        AAAEBndCXRQsqznnNAG+XsDzdSF9SzhoUqBFp/lRpBJcVygJdMddarXNcDnTCO2TFoF5uq
-        rD3sicDofldtedxhlDdUAAAAA2JveAEC
-        -----END OPENSSH PRIVATE KEY-----
-        "#;
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VAAAAIi6f7S0un+0
+tAAAAAtzc2gtZWQyNTUxOQAAACCXTHXWq1zXA50wjtkxaBebqqw97InA6H5XbXncYZQ3VA
+AAAEBndCXRQsqznnNAG+XsDzdSF9SzhoUqBFp/lRpBJcVygJdMddarXNcDnTCO2TFoF5uq
+rD3sicDofldtedxhlDdUAAAAA2JveAEC
+-----END OPENSSH PRIVATE KEY-----
+"#;
 
         let mut file = OpenOptions::new()
-            .create(false)
+            .create(true) // TODO set false
             .write(true)
             .open(KEY_PATH.as_path())
             .await?;
         file.write_all(key.as_bytes()).await?;
-    }
+    //}
 
     let mut file = File::open(KEY_PATH.as_path()).await?;
     let mut contents = vec![];

@@ -224,8 +224,6 @@ impl MachineInfo {
                 continue;
             }
 
-            //println!("{}",line);
-
             if let Some(caps) = regex.captures(line) {
                 let state = caps[1].parse::<String>()?;
                 let state = match state.as_str() {
