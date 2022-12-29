@@ -31,6 +31,7 @@ pub async fn create(name: &str, image: Image) -> Result<()> {
 }
 
 pub fn list_vms() -> Result<Vec<Machine>> {
+    // TODO remove depenency
     let list = vboxhelper::get_vm_list()?;
     let vms: Vec<Machine> = list
         .iter()
