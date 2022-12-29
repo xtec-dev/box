@@ -64,8 +64,12 @@ pub async fn create(name: &str) -> Result<()> {
 
 fn new_ignition(hostname: &str) -> String {
 
+  // podman run -i --rm quay.io/coreos/butane:release --pretty --strict < config.bu > config.ign
+
+
   // TODO fix zincati
   //sudo systemctl disable --now zincati.service
+  // https://github.com/coreos/fedora-coreos-tracker/issues/392
 
   let ignition = format!(r#"{{
   "ignition": {{ "version": "3.0.0" }},
@@ -73,8 +77,7 @@ fn new_ignition(hostname: &str) -> String {
     "users": [
       {{
         "name": "box",
-        "create:
-        groups: [ sudo, docker ]
+        "groups": [ "docker", "wheel"],
         "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
         "sshAuthorizedKeys": [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"

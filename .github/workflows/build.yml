@@ -12,15 +12,15 @@ env:
 jobs:
   build:
     name: build-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu
             target: x86_64-unknown-linux-musl
             bin: box
-          - os: windows-latest
+          - os: windows
             target: x86_64-pc-windows-msvc 
             bin: box.exe
     steps:
@@ -31,7 +31,7 @@ jobs:
       - run: rustup target add ${{ matrix.target }}
       - run: |
           if [[ ${{matrix.os}} =~ ^ubuntu.*$ ]]; then
-            sudo apt-get install musl-tools libssl-dev
+            sudo apt install -y musl-tools
           fi
       - run: cargo build --release --package cli --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v3
@@ -45,9 +45,3 @@ jobs:
           jf c use xtec
           jf rt u target/${{ matrix.target }}/release/${{ matrix.bin }} bin/${{ matrix.bin }}
 
-# https://github.com/nicolas-van/rust-cross-compile-example/blob/main/.github/workflows/rust.yml
-#- uses: actions/upload-artifact@v3
-      #  with:
-      #    path: |
-      #      ${{ steps.compile.outputs.BUILT_ARCHIVE }}
-      #      ${{ steps.compile.outputs.BUILT_CHECKSUM }}

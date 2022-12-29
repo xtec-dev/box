@@ -1,6 +1,6 @@
 [package]
 name = "cli"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 
 [[bin]]
@@ -10,6 +10,7 @@ path = "src/box.rs"
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.0", features = ["derive"] }
+code = { path = "../code" }
 comfy-table = "6.1"
 #hcloud = { version = "*", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1.11", features = ["macros", "rt-multi-thread"] }
