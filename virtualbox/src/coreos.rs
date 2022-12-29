@@ -30,7 +30,7 @@ https://docs.fedoraproject.org/en-US/fedora-coreos/authentication/#_enabling_ssh
 // https://docs.fedoraproject.org/en-US/fedora-coreos/provisioning-virtualbox/
 // https://coreos.github.io/ignition/configuration-v3_2/
 
-const COREOS_URL: &str = "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/37.20221127.3.0/x86_64/fedora-coreos-37.20221127.3.0-virtualbox.x86_64.ova";
+const COREOS_URL: &str = "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/37.20221211.3.0/x86_64/fedora-coreos-37.20221211.3.0-virtualbox.x86_64.ova";
 
 pub async fn create(name: &str) -> Result<()> {
     let ova_path = ova::get("coreos-37", COREOS_URL).await?;

@@ -10,38 +10,36 @@ defaults:
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  build:
-    name: ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu
-            target: x86_64-unknown-linux-musl
-            bin: box
-          - os: windows
-            target: x86_64-pc-windows-gnu
-            bin: box.exe
+  windows:
+    name: windows
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ${{matrix.os}}
-      - run: rustup target add ${{ matrix.target }}
-      - run: |
-          if [[ ${{matrix.os}} =~ ^ubuntu.*$ ]]; then
-            sudo apt install -y musl-tools
-          fi
-      - run: cargo build --release --package cli --target ${{ matrix.target }}
-      - uses: actions/upload-artifact@v3
-        with:
-          name: bin
-          path: target/${{ matrix.target }}/release/${{ matrix.bin }}
+          key: windows
+      - run: cargo build --release --package cli
       - uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u target/${{ matrix.target }}/release/${{ matrix.bin }} bin/${{ matrix.bin }}
+          jf rt u target/release/box.exe bin/box.exe
 
+  linux:
+    name: linux
+    runs-on: linux-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{matrix.os}}
+      - run: rustup target add x86_64-unknown-linux-musl
+      - run: sudo apt install -y musl-tools
+      - run: cargo build --release --package cli --target x86_64-unknown-linux-musl
+      - uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_ENV_1: ${{ secrets.JFROG }}
+      - run: |
+          jf c use xtec
+          jf rt u target/x86_64-unknown-linux-musl/release/box bin/box
