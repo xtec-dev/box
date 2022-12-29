@@ -216,12 +216,15 @@ impl MachineInfo {
 
     pub fn state(&self) -> Result<State> {
         // VMState="poweroff"
-        let regex = Regex::new(r#"^VMState="(\w*)"$"#).unwrap();
+        let regex = Regex::new(r#"^VMState="(\w*)""#).unwrap();
+
 
         for line in self.0.split("\n") {
             if line.len() == 0 {
                 continue;
             }
+
+            //println!("{}",line);
 
             if let Some(caps) = regex.captures(line) {
                 let state = caps[1].parse::<String>()?;
