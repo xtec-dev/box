@@ -30,7 +30,7 @@ enum Commands {
         name: String,
 
         /// Provider
-        #[arg(value_enum,short,long, default_value_t = Provider::VirtualBox)]
+        #[arg(value_enum,short,long, default_value_t = Provider::Virtualbox)]
         provider: Provider,
 
         /// OS
@@ -81,7 +81,7 @@ enum Image {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Provider {
     /// VirtualBox
-    VirtualBox,
+    Virtualbox,
 }
 
 #[tokio::main]

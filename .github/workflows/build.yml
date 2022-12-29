@@ -26,6 +26,7 @@ jobs:
       - run: |
           rustup set auto-self-update disable
           rustup toolchain install stable --profile minimal
+          rustup target add ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -r -p cli --target ${{ matrix.target }}
       - uses: jfrog/setup-jfrog-cli@v3
