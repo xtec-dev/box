@@ -20,7 +20,7 @@ jobs:
           UPLOAD_MODE: none
       - uses: jfrog/setup-jfrog-cli@v3
         env:
-          JF_ENV: ${{ secrets.JFROG }}
+          JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
           jf rt ping

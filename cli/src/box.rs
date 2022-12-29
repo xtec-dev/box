@@ -8,7 +8,7 @@ use virtualbox::Machine;
 #[derive(Parser)]
 #[command(name = "box")]
 #[command(author = "David de Mingo <david@optersoft.com>")]
-#[command(version = "0.1")]
+#[command(version = "0.0.1")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
