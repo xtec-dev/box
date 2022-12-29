@@ -1,30 +1,10 @@
 # TODO
 
 
-## cloud-init
+## JFrog
 
-https://dev.to/otomato_io/automating-custom-iso-with-cloud-init-2lc2
+curl -fL https://install-cli.jfrog.io | sh
 
-https://4sysops.com/archives/managing-virtualbox-vms-with-powershell/
+https://github.com/marketplace/actions/setup-jfrog-cli
 
-
-
-https://docs.rs/vboxhelper/latest/vboxhelper/
-
-# Hetzner
-
-ssh -i $HOME/.ssh/id_ed25519_xtec -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@
-
-
-## Ubuntu
-
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEF5ihgAq1whiWiqoB7bVFCjG0/9mzUbMg3S4jPfma3Y alumne
-
-
-visudo (put at the end)
-alumne ALL=(ALL) NOPASSWD:ALL
-
-https://github.com/ruzickap/packer-templates/
-
-
-https://github.com/magiclen/execute/blob/master/execute/README.md
+jf c export xtec
