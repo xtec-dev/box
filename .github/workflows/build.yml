@@ -3,36 +3,36 @@ on:
   push:
     branches:
       - main
+defaults:
+  run:
+    # necessary for windows
+    shell: bash
+env:
+  CARGO_TERM_COLOR: always
 jobs:
   build:
     name: build-${{ matrix.os }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: linux
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             bin: box
-          - os: windows
-            target: x86_64-pc-windows-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc 
             bin: box.exe
-    env:
-      CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v3
-      # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
-      # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
-      - run: |
-          rustup set auto-self-update disable
-          rustup toolchain install stable --profile minimal
-          rustup target add ${{ matrix.target }}
-      #- uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get install -y libssl-dev musl-tools
-      - run: cargo build -r -p cli --target ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cargo-${{matrix.target}
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release -package cli --target ${{ matrix.target }}
       - uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u target/release/${{ matrix.bin }} bin/${{ matrix.bin }}
+          jf rt u target/${{ matrix.target }}/release/${{ matrix.bin }} bin/${{ matrix.bin }}
