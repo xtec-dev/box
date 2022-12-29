@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::{ContentArrangement, Table};
@@ -34,7 +34,7 @@ enum Commands {
         provider: Provider,
 
         /// OS
-        #[arg(value_enum, short,long,default_value_t = Image::Ubuntu)]
+        #[arg(value_enum, short,long,default_value_t = Image::Coreos)]
         image: Image,
     },
 
@@ -99,11 +99,16 @@ async fn main() {
         Some(Commands::SSH { name }) => ssh(name).await,
         Some(Commands::Start { name }) => start(name).await,
         Some(Commands::Stop { name }) => stop(name).await,
-        None => Ok(()),
+        None => {
+            if let Err(err) = Cli::command().print_help() {
+                println!("error: {}", err);
+            };
+            Ok(())
+        }
     };
 
     if let Err(err) = result {
-        println!("{}", err);
+        println!("error: {}", err);
     }
 }
 

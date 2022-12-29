@@ -7,25 +7,11 @@ use crate::ssh;
 use crate::{manage, BOX_PATH};
 
 // https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
+
 // https://docs.fedoraproject.org/en-US/fedora-coreos/provisioning-virtualbox/
 // https://coreos.github.io/ignition/configuration-v3_2/
 
 const COREOS_URL: &str = "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/37.20221127.3.0/x86_64/fedora-coreos-37.20221127.3.0-virtualbox.x86_64.ova";
-
-const IGNITION_CONFIG: &str = r#"{
-    "ignition": { "version": "3.0.0" },
-    "passwd": {
-      "users": [
-        {
-          "name": "box",
-          "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
-          "sshAuthorizedKeys": [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"
-          ]
-        }
-      ]
-    }
-  }"#;
 
 pub async fn create(name: &str) -> Result<()> {
     let ova_path = ova::get("coreos-37", COREOS_URL).await?;
@@ -39,7 +25,7 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let igntion = new_ignition(name); 
+    let ignition = new_ignition(name); 
 
     let output = Command::new(manage::get_cmd())
         .args([
@@ -47,7 +33,7 @@ pub async fn create(name: &str) -> Result<()> {
             "set",
             name,
             "/Ignition/Config",
-            IGNITION_CONFIG,
+            &ignition,
         ])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
@@ -63,16 +49,28 @@ fn new_ignition(hostname: &str) -> String {
   "ignition": {{ "version": "3.0.0" }},
   "passwd": {{
     "users": [
-        {{
-          "name": "box",
-          "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
-          "sshAuthorizedKeys": [
-            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"
-          ]
-        }}
-      ]
-    }}
-  }}"#);
+      {{
+        "name": "box",
+        "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
+        "sshAuthorizedKeys": [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"
+        ]
+      }}
+    ]
+  }},
+  "storage": {{
+    "files": [
+      {{
+        "path": "/etc/hostname",
+        "contents": {{
+          "compression": "",
+          "source": "data:,{}%0A"
+        }},
+        "mode": 420
+      }}
+    ]
+  }}
+}}"#, hostname);
 
   ignition
 }
