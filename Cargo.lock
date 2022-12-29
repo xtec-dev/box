@@ -169,7 +169,6 @@ dependencies = [
  "anyhow",
  "clap",
  "comfy-table",
- "hcloud",
  "tokio",
  "virtualbox",
 ]

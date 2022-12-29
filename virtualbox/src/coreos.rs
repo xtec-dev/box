@@ -6,6 +6,8 @@ use crate::ova;
 use crate::ssh;
 use crate::{manage, BOX_PATH};
 
+
+
 /*
 
 To generate a secure password hash, use mkpasswd from the whois package. Your Linux distro may ship a different mkpasswd implementation; you can ensure you’re using the correct one by running it from a container:
@@ -61,6 +63,9 @@ pub async fn create(name: &str) -> Result<()> {
 }
 
 fn new_ignition(hostname: &str) -> String {
+
+  // TODO fix zincati
+  //sudo systemctl disable --now zincati.service
 
   let ignition = format!(r#"{{
   "ignition": {{ "version": "3.0.0" }},

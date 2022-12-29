@@ -34,7 +34,7 @@ enum Commands {
         provider: Provider,
 
         /// OS
-        #[arg(value_enum, short,long,default_value_t = Image::Coreos)]
+        #[arg(value_enum, short,long,default_value_t = Image::Ubuntu)]
         image: Image,
     },
 
