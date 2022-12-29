@@ -29,7 +29,7 @@ jobs:
         with:
           key: cargo-${{matrix.target}}
       - run: rustup target add ${{ matrix.target }}
-      - run: cargo build --release -package cli --target ${{ matrix.target }}
+      - run: cargo build --release --package cli --target ${{ matrix.target }}
       - uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG }}

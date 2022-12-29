@@ -39,6 +39,8 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
+    let igntion = new_ignition(name); 
+
     let output = Command::new(manage::get_cmd())
         .args([
             "guestproperty",
@@ -53,4 +55,24 @@ pub async fn create(name: &str) -> Result<()> {
     ssh::set_port_forward(name).await?;
 
     Ok(())
+}
+
+fn new_ignition(hostname: &str) -> String {
+
+  let ignition = format!(r#"{{
+  "ignition": {{ "version": "3.0.0" }},
+  "passwd": {{
+    "users": [
+        {{
+          "name": "box",
+          "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
+          "sshAuthorizedKeys": [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"
+          ]
+        }}
+      ]
+    }}
+  }}"#);
+
+  ignition
 }
