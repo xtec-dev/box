@@ -11,37 +11,37 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   build:
-    name: build-${{ matrix.os }}
+    name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          #- os: ubuntu
-          #  target: x86_64-unknown-linux-musl
-          #  bin: box
+          - os: ubuntu
+            target: x86_64-unknown-linux-musl
+            bin: box
           - os: windows
-            target: x86_64-pc-windows-msvc 
+            target: x86_64-pc-windows-gnu
             bin: box.exe
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
         with:
-          key: cargo-${{matrix.target}}
+          key: ${{matrix.os}}
       - run: rustup target add ${{ matrix.target }}
       - run: |
           if [[ ${{matrix.os}} =~ ^ubuntu.*$ ]]; then
             sudo apt install -y musl-tools
           fi
-      - run: cargo build --release --package cli #--target ${{ matrix.target }}
-      #- uses: actions/upload-artifact@v3
-      #  with:
-      #    name: bin
-      #    path: target/${{ matrix.target }}/release/${{ matrix.bin }}
+      - run: cargo build --release --package cli --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: bin
+          path: target/${{ matrix.target }}/release/${{ matrix.bin }}
       - uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u target/release/${{ matrix.bin }} bin/${{ matrix.bin }}
+          jf rt u target/${{ matrix.target }}/release/${{ matrix.bin }} bin/${{ matrix.bin }}
 
