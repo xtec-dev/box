@@ -6,6 +6,23 @@ use crate::ova;
 use crate::ssh;
 use crate::{manage, BOX_PATH};
 
+/*
+
+To generate a secure password hash, use mkpasswd from the whois package. Your Linux distro may ship a different mkpasswd implementation; you can ensure you’re using the correct one by running it from a container:
+
+$ podman run -ti --rm quay.io/coreos/mkpasswd --method=yescrypt
+Password:
+$y$j9T$A0Y3wwVOKP69S.1K/zYGN.$S596l11UGH3XjN...
+The yescrypt hashing method is recommended for new passwords. For more details on hashing methods, see man 5 crypt.
+
+The configured password will be accepted for local authentication at the console. By default, Fedora CoreOS does not allow password authentication via SSH.
+
+https://docs.fedoraproject.org/en-US/fedora-coreos/authentication/#_enabling_ssh_password_authentication
+
+*/
+
+// https://docs.fedoraproject.org/en-US/fedora-coreos/authentication/
+
 // https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
 
 // https://docs.fedoraproject.org/en-US/fedora-coreos/provisioning-virtualbox/
@@ -51,6 +68,8 @@ fn new_ignition(hostname: &str) -> String {
     "users": [
       {{
         "name": "box",
+        "create:
+        groups: [ sudo, docker ]
         "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
         "sshAuthorizedKeys": [
           "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"

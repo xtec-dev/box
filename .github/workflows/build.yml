@@ -31,7 +31,7 @@ jobs:
       - run: rustup target add ${{ matrix.target }}
       - run: |
           if [[ ${{matrix.os}} =~ ^ubuntu.*$ ]]; then
-            sudo apt-get install musl-tools
+            sudo apt-get install musl-tools libssl-dev
           fi
       - run: cargo build --release --package cli --target ${{ matrix.target }}
       - uses: jfrog/setup-jfrog-cli@v3
@@ -41,6 +41,7 @@ jobs:
           jf c use xtec
           jf rt u target/${{ matrix.target }}/release/${{ matrix.bin }} bin/${{ matrix.bin }}
 
+# https://github.com/nicolas-van/rust-cross-compile-example/blob/main/.github/workflows/rust.yml
 #- uses: actions/upload-artifact@v3
       #  with:
       #    path: |
