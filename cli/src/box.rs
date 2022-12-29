@@ -5,10 +5,18 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{ContentArrangement, Table};
 use virtualbox::Machine;
 
+/*
+
+.name(env!("CARGO_PKG_NAME"))
+    .about(env!("CARGO_PKG_DESCRIPTION"))
+    .version(env!("CARGO_PKG_VERSION"))
+    arg_required_else_help(true),
+*/
+
 #[derive(Parser)]
 #[command(name = "box")]
 #[command(author = "David de Mingo <david@optersoft.com>")]
-#[command(version = "0.0.1")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,

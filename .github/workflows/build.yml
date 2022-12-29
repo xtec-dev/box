@@ -5,22 +5,26 @@ on:
       - main
 jobs:
   build:
-    name: build ${{ matrix.target }}
+    name: build-${{ matrix.os }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl]
+        os: [ubuntu-latest, windows-latest]
+    env:
+      CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@master
-      - uses: rust-build/rust-build.action@v1.4.0
-        with:
-          RUSTTARGET: ${{ matrix.target }}
-          SRC_DIR: cli
-          UPLOAD_MODE: none
+      - uses: actions/checkout@v3
+      # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
+      # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
+      - run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -r -p cli
       - uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u ${{ steps.compile.outputs.BUILT_ARCHIVE }} bin
+          jf rt u target/release/box bin
