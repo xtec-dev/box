@@ -1,6 +1,9 @@
 # TODO
 
 
+
+https://github.com/taiki-e/upload-rust-binary-action
+
 ## JFrog
 
 curl -fL https://install-cli.jfrog.io | sh

@@ -6,11 +6,15 @@ on:
 jobs:
   build:
     name: build-${{ matrix.os }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            bin: box
+          - os: windows-latest
+            bin: box.exe
     env:
       CARGO_TERM_COLOR: always
     steps:
@@ -27,4 +31,4 @@ jobs:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u target/release/box bin
+          jf rt u target/release/${{ matrix.bin }} bin/${{ matrix.bin }}
