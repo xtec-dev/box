@@ -16,7 +16,7 @@ jobs:
       - uses: rust-build/rust-build.action@v1.4.0
         with:
           RUSTTARGET: ${{ matrix.target }}
-          SRC_DIR: box
+          SRC_DIR: cli
           UPLOAD_MODE: none
 
       #- uses: actions/upload-artifact@v3
