@@ -13,9 +13,11 @@ mod iso;
 // https://github.com/marysaka/mkisofs-rs
 
 const USER_DATA: &str = r#"#cloud-config
+groups:
+  - ubuntu: [docker]
 users:
   - name: box
-    groups: sudo
+    groups: sudo, docker
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     plain_text_passwd: password
     lock_passwd: false
