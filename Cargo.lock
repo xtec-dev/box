@@ -182,6 +182,9 @@ name = "code"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "home",
+ "tokio",
+ "virtualbox",
 ]
 
 [[package]]

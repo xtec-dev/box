@@ -104,14 +104,3 @@ rD3sicDofldtedxhlDdUAAAAA2JveAEC
     }
 }
 
-/*
-
-
-Host box
-    HostName 127.0.0.1
-    IdentityFile ~/.ssh/id_ed25519_box
-    User alumne
-    Port 2201
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
-    */

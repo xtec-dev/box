@@ -24,6 +24,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Start a stopped virtual machine and config ssh ...
+    Code { name: String },
     /// Create a Virtual Machine.
     Create {
         /// The name of the Virtual Machine.
@@ -89,6 +91,7 @@ async fn main() {
     let cli = Cli::parse();
 
     let result = match &cli.command {
+        Some(Commands::Code { name }) => code(name).await,
         Some(Commands::Create {
             name,
             provider,
@@ -110,6 +113,10 @@ async fn main() {
     if let Err(err) = result {
         println!("error: {}", err);
     }
+}
+
+async fn code(name: &String) -> Result<()> {
+    code::start(name).await
 }
 
 async fn create(name: &String, provider: &Provider, image: &Image) -> Result<()> {
