@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::process::Command;
 
 use crate::ova;
-use crate::ssh;
+use crate::network;
 use crate::{manage, BOX_PATH};
 
 
@@ -57,7 +57,8 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    ssh::set_port_forward(name).await?;
+    network::set_port_forward(name).await?;
+    network::set_hostonly(name)?;
 
     Ok(())
 }

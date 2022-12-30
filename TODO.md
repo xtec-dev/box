@@ -1,6 +1,8 @@
 # TODO
 
 
+$env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
+
 https://github.com/taiki-e/upload-rust-binary-action
 
 ## JFrog

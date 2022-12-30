@@ -9,13 +9,12 @@ use iso::{
 mod iso;
 
 // https://cloudinit.readthedocs.io/en/latest/topics/examples.html
-// https://gist.github.com/fardjad/a7e634d40f75dc29cff432e7372a1c93
 // https://github.com/marysaka/mkisofs-rs
 
 const USER_DATA: &str = r#"#cloud-config
 users:
   - name: box
-    groups: sudo
+    groups: sudo, docker
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     plain_text_passwd: password
     lock_passwd: false
@@ -40,6 +39,8 @@ pub struct MetaData {
 pub fn write_seed_iso(output: &Path, metadata: MetaData) -> Result<()> {
     let output = String::from(output.to_str().unwrap());
 
+    // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html#network-config-v2
+    // TODO make configurable
     let metadata = format!(
         r#"local-hostname: {}
 network-interfaces: |

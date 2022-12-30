@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -7,9 +6,7 @@ use once_cell::sync::Lazy;
 use ssh_key::PrivateKey;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::Mutex;
 
-use crate::manage;
 
 static KEY_PATH: Lazy<PathBuf> = Lazy::new(|| {
     home::home_dir()
@@ -18,36 +15,6 @@ static KEY_PATH: Lazy<PathBuf> = Lazy::new(|| {
         .join("id_ed25519_box")
 });
 
-static FORWARD_MUTEX: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(0));
-
-pub async fn set_port_forward(name: &str) -> Result<()> {
-    let _lock = FORWARD_MUTEX.lock().await;
-
-    let mut ports = Vec::new();
-    for vm in crate::list_vms()? {
-        if let Ok(port) = vm.info()?.ssh_port() {
-            ports.push(port);
-        }
-    }
-    ports.sort();
-
-    let mut ssh_port = 2201;
-    for port in ports {
-        if port == ssh_port {
-            ssh_port += 1;
-        } else {
-            break;
-        }
-    }
-
-    let rule = format!("ssh,tcp,127.0.0.1,{},,22", ssh_port);
-
-    let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--natpf1", &rule])
-        .output()?;
-    std::io::stdout().write_all(&output.stdout)?;
-    Ok(())
-}
 
 pub async fn connect(port: u16) -> Result<()> {
     if !KEY_PATH.exists() {

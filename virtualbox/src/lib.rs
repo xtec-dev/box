@@ -14,6 +14,7 @@ mod coreos;
 mod manage;
 //#[cfg(windows)]
 //mod mscom;
+mod network;
 mod ova;
 mod ssh;
 mod ubuntu;
@@ -112,6 +113,9 @@ impl Machine {
         if state == State::Running || state == State::Starting {
             return Ok(());
         }
+
+        // $env:path = "C:\Program Files\Oracle\VirtualBox;$env:path"
+        //  VBoxHeadless.exe -s box -vrde off
 
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["startvm", &self.name, "--type", "headless"]);
