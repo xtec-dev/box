@@ -28,7 +28,7 @@ jobs:
 
   linux:
     name: linux
-    runs-on: linux-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
