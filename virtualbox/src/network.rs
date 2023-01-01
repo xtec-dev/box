@@ -26,6 +26,8 @@ $adapter = "VirtualBox Host-Only Ethernet Adapter"
         }#>
 */
 
+// https://www.virtualbox.org/manual/ch08.html#vboxmanage-dhcpserver
+
 // ip  -o -4 addr
 
 pub fn set_hostonly(name: &str) -> Result<()> {

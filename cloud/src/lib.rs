@@ -8,8 +8,12 @@ use iso::{
 
 mod iso;
 
+// https://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html
+
 // https://cloudinit.readthedocs.io/en/latest/topics/examples.html
 // https://github.com/marysaka/mkisofs-rs
+
+// /var/log/cloud-init*
 
 const USER_DATA: &str = r#"#cloud-config
 users:
@@ -23,7 +27,6 @@ users:
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box
 
-# NOTE: Cloud-init applies network settings on every boot by default. To retain network settings from first boot, add the following 'write_files' section:
 write_files:
   - path: /etc/cloud/cloud.cfg.d/80_disable_network_after_firstboot.cfg
     content: |
@@ -40,14 +43,7 @@ pub fn write_seed_iso(output: &Path, metadata: MetaData) -> Result<()> {
     let output = String::from(output.to_str().unwrap());
 
     // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html#network-config-v2
-    // TODO make configurable
-    let metadata = format!(
-        r#"local-hostname: {}
-network-interfaces: |
-  auto enp0s3
-  iface enp0s3 inet dhcp"#,
-        metadata.hostname
-    );
+    let metadata = format!(r#"local-hostname: {}"#, metadata.hostname);
 
     let mut file_entries = Vec::new();
     let entry = FileEntry {
@@ -68,8 +64,37 @@ network-interfaces: |
     };
     file_entries.push(entry);
 
+    file_entries.push(network_config());
+
     iso::create_iso(output, file_entries)?;
     Ok(())
+}
+
+/*
+  Network configuration can be provided to cloud-init in Networking Config Version 2 by providing that YAML formatted data in a file named network-config. If found, this file will override a network-interfaces file.
+*/
+fn network_config() -> FileEntry {
+    let config = format!(
+        r#"version: 2
+ethernets:
+  enp0s3:
+    dhcp4: true
+  enp0s8:
+    addresses:
+      - 192.168.56.{}/24
+"#,
+        101
+    );
+
+    let entry = FileEntry {
+        name: String::from("network-config"),
+        content: String::from(&config),
+        size: config.len() as usize,
+        lba: 0,
+        aligned_size: utils::align_up(config.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
+    };
+
+    entry
 }
 
 #[cfg(test)]

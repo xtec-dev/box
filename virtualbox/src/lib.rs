@@ -99,6 +99,8 @@ impl Machine {
             let msg = String::from_utf8(output.stderr)?;
             bail!(format!("delete:{:?}", msg))
         }
+
+        // TODO delete iso
     }
 
     pub async fn ssh(&self) -> Result<()> {

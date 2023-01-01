@@ -10,6 +10,7 @@ use crate::{manage, VIRTUALBOX_PATH};
 
 // https://github.com/marysaka/mkisofs-rs
 //https://wiki.debian.org/genisoimage
+// https://gist.github.com/smoser/635897f845f7cb56c0a7ac3018a4f476#file-network-config-v1-yaml
 
 // https://www.freedesktop.org/wiki/Software/systemd/PredictableNetworkInterfaceNames/
 
