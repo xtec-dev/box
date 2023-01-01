@@ -13,7 +13,7 @@ static FORWARD_MUTEX: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(0));
 
 $adapter = "VirtualBox Host-Only Ethernet Adapter"
         #Linux "vboxnet0"
-        
+
         #vboxmanage hostonlyif ipconfig $ifname --ip 192.168.56.1 --netmask 255.255.255.0
         #vboxmanage dhcpserver modify --ifname $ifname --disable
 
@@ -29,15 +29,26 @@ $adapter = "VirtualBox Host-Only Ethernet Adapter"
 // ip  -o -4 addr
 
 pub fn set_hostonly(name: &str) -> Result<()> {
-
-    #[cfg(windows)]
+    /*
+        let mut cmd = Command::new(manage::get_cmd());
+        cmd.args(["list", "--hostonlyifs"]);
+        let ouput = cmd.output()?;
+    */
+    #[cfg(target_os = "windows")]
     let adapter = "VirtualBox Host-Only Ethernet Adapter";
 
-    #[cfg(linux)]
+    #[cfg(target_os = "linux")]
     let adapter = "vboxnet0";
 
     let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--nic2", "hostonly","--hostonlyadapter2",&adapter])
+        .args([
+            "modifyvm",
+            name,
+            "--nic2",
+            "hostonly",
+            "--hostonlyadapter2",
+            &adapter,
+        ])
         .output()?;
     std::io::stdout().write_all(&output.stdout)?;
 

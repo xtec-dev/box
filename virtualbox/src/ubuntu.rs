@@ -4,9 +4,9 @@ use std::process::Command;
 use anyhow::Result;
 use cloud::{write_seed_iso, MetaData};
 
-use crate::ova;
 use crate::network;
-use crate::{manage, BOX_PATH};
+use crate::ova;
+use crate::{manage, VIRTUALBOX_PATH};
 
 // https://github.com/marysaka/mkisofs-rs
 //https://wiki.debian.org/genisoimage
@@ -24,11 +24,11 @@ pub async fn create(name: &str) -> Result<()> {
         .arg("import")
         .arg(ova_path)
         .args(["--vsys", "0", "--vmname", name, "--basefolder"])
-        .arg(BOX_PATH.to_path_buf())
+        .arg(VIRTUALBOX_PATH.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let seed = BOX_PATH.join("seed.iso");
+    let seed = VIRTUALBOX_PATH.join(name).join("seed.iso");
     write_seed_iso(
         &seed,
         MetaData {

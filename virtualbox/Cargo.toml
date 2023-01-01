@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0"
 cloud = { path = "../cloud" }
+core = { path = "../core" }
 futures-util = "0.3.14"
 home = "0.5"
 indicatif = "0.15"

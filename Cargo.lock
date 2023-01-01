@@ -175,6 +175,7 @@ dependencies = [
  "anyhow",
  "byteorder",
  "chrono",
+ "core",
 ]
 
 [[package]]
@@ -228,6 +229,15 @@ name = "const-oid"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cec318a675afcb6a1ea1d4340e2d377e56e47c266f28043ceccbf4412ddfdd3b"
+
+[[package]]
+name = "core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "home",
+ "once_cell",
+]
 
 [[package]]
 name = "core-foundation-sys"
@@ -1845,6 +1855,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cloud",
+ "core",
  "futures-util",
  "home",
  "indicatif",

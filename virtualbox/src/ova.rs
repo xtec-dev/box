@@ -7,12 +7,10 @@ use std::{cmp::min, path::Path};
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::BOX_PATH;
-
 // TODO struct ova with hash
 
 pub async fn get(name: &str, url: &str) -> Result<PathBuf> {
-    let path = BOX_PATH.join("ova");
+    let path = core::BOX_PATH.join("ova");
     std::fs::create_dir_all(&path)?;
 
     let name = format!("{}.ova", name);

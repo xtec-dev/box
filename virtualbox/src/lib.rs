@@ -12,7 +12,6 @@ use regex::Regex;
 
 mod coreos;
 mod manage;
-//#[cfg(windows)]
 //mod mscom;
 mod network;
 mod ova;
@@ -22,7 +21,7 @@ mod ubuntu;
 // https://www.virtualbox.org/manual/ch08.html
 // https://www.youtube.com/watch?v=eS_7WOnP2rs
 
-static BOX_PATH: Lazy<PathBuf> = Lazy::new(|| home::home_dir().expect("Home dir").join(".box"));
+pub static VIRTUALBOX_PATH: Lazy<PathBuf> = Lazy::new(|| core::BOX_PATH.join("virtualbox"));
 
 pub async fn create(name: &str, image: Image) -> Result<()> {
     match image {
@@ -221,7 +220,6 @@ impl MachineInfo {
     pub fn state(&self) -> Result<State> {
         // VMState="poweroff"
         let regex = Regex::new(r#"^VMState="(\w*)""#).unwrap();
-
 
         for line in self.0.split("\n") {
             if line.len() == 0 {

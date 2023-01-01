@@ -2,11 +2,9 @@ use anyhow::Result;
 use std::io::{self, Write};
 use std::process::Command;
 
-use crate::ova;
 use crate::network;
-use crate::{manage, BOX_PATH};
-
-
+use crate::ova;
+use crate::{manage, VIRTUALBOX_PATH};
 
 /*
 
@@ -40,20 +38,14 @@ pub async fn create(name: &str) -> Result<()> {
         .arg("import")
         .arg(ova_path)
         .args(["--vsys", "0", "--vmname", name, "--basefolder"])
-        .arg(BOX_PATH.to_path_buf())
+        .arg(VIRTUALBOX_PATH.as_path())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let ignition = new_ignition(name); 
+    let ignition = new_ignition(name);
 
     let output = Command::new(manage::get_cmd())
-        .args([
-            "guestproperty",
-            "set",
-            name,
-            "/Ignition/Config",
-            &ignition,
-        ])
+        .args(["guestproperty", "set", name, "/Ignition/Config", &ignition])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
@@ -64,15 +56,14 @@ pub async fn create(name: &str) -> Result<()> {
 }
 
 fn new_ignition(hostname: &str) -> String {
+    // podman run -i --rm quay.io/coreos/butane:release --pretty --strict < config.bu > config.ign
 
-  // podman run -i --rm quay.io/coreos/butane:release --pretty --strict < config.bu > config.ign
+    // TODO fix zincati
+    //sudo systemctl disable --now zincati.service
+    // https://github.com/coreos/fedora-coreos-tracker/issues/392
 
-
-  // TODO fix zincati
-  //sudo systemctl disable --now zincati.service
-  // https://github.com/coreos/fedora-coreos-tracker/issues/392
-
-  let ignition = format!(r#"{{
+    let ignition = format!(
+        r#"{{
   "ignition": {{ "version": "3.0.0" }},
   "passwd": {{
     "users": [
@@ -98,7 +89,9 @@ fn new_ignition(hostname: &str) -> String {
       }}
     ]
   }}
-}}"#, hostname);
+}}"#,
+        hostname
+    );
 
-  ignition
+    ignition
 }
