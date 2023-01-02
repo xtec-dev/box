@@ -30,8 +30,6 @@ pub struct User {
 pub fn write_seed_iso(output: &Path, config: Config) -> Result<()> {
     let output = String::from(output.to_str().unwrap());
 
-    // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html#network-config-v2
-
     let mut file_entries = Vec::new();
 
     file_entries.push(meta_data(&config.hostname));
@@ -56,15 +54,15 @@ fn meta_data(hostname: &str) -> FileEntry {
 }
 
 fn user_data(config: &Config) -> Result<FileEntry> {
+    // https://cloudinit.readthedocs.io/en/latest/topics/examples.html
+
     let ssh_authorized_key = config
         .user
         .ssh_authorized_key
         .to_openssh()
         .context("cloud: user-data: authorized key")?;
 
-    // key.to_openssh(ssh_key::LineEnding::LF)?;
-
-    let data = format!(
+    let mut data = format!(
         r#"#cloud-config
 users:
   - name: box
@@ -80,6 +78,24 @@ users:
         ssh_authorized_key
     );
 
+    if let Some(key) = &config.user.ssh_key {
+        let openssh_key = key.to_openssh(ssh_key::LineEnding::LF)?;
+        let openssh_key: &str = openssh_key.as_ref();
+        let openssh_key = base64::encode(openssh_key);
+
+        let data2 = format!(
+            r#"write_files:
+- path: /home/box/.ssh/id_ed25519
+  permissions: '0600'
+  owner: box:box
+  content: !!binary |
+    {}"#,
+            openssh_key
+        );
+
+        data.push_str(&data2);
+    }
+
     let entry = FileEntry {
         name: String::from("user-data"),
         content: String::from(&data),
@@ -92,9 +108,11 @@ users:
 }
 
 /*
-  Network configuration can be provided to cloud-init in Networking Config Version 2 by providing that YAML formatted data in a file named network-config. If found, this file will override a network-interfaces file.
+  Network configuration can be provided to cloud-init in Networking Config Version 2 by providing that YAML formatted data in a file named network-config.
 */
 fn network_config(config: &Config) -> FileEntry {
+    // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html
+
     let config = format!(
         r#"version: 2
 ethernets:
