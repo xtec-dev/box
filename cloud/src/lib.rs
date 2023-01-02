@@ -1,10 +1,11 @@
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use iso::{
     file_entry::FileEntry,
     utils::{self, LOGIC_SIZE_U32},
 };
+use ssh_key::{PrivateKey, PublicKey};
 
 mod iso;
 
@@ -15,7 +16,56 @@ mod iso;
 
 // /var/log/cloud-init*
 
-const USER_DATA: &str = r#"#cloud-config
+pub struct Config {
+    pub hostname: String,
+    pub host: u8,
+    pub user: User,
+}
+
+pub struct User {
+    pub ssh_key: Option<PrivateKey>,
+    pub ssh_authorized_key: PublicKey,
+}
+
+pub fn write_seed_iso(output: &Path, config: Config) -> Result<()> {
+    let output = String::from(output.to_str().unwrap());
+
+    // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html#network-config-v2
+
+    let mut file_entries = Vec::new();
+
+    file_entries.push(meta_data(&config.hostname));
+    file_entries.push(user_data(&config)?);
+    file_entries.push(network_config(&config));
+
+    iso::create_iso(output, file_entries)?;
+    Ok(())
+}
+
+fn meta_data(hostname: &str) -> FileEntry {
+    let metadata = format!(r#"local-hostname: {}"#, hostname);
+
+    let entry = FileEntry {
+        name: String::from("meta-data"),
+        content: String::from(&metadata),
+        size: metadata.len() as usize,
+        lba: 0,
+        aligned_size: utils::align_up(metadata.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
+    };
+    entry
+}
+
+fn user_data(config: &Config) -> Result<FileEntry> {
+    let ssh_authorized_key = config
+        .user
+        .ssh_authorized_key
+        .to_openssh()
+        .context("cloud: user-data: authorized key")?;
+
+    // key.to_openssh(ssh_key::LineEnding::LF)?;
+
+    let data = format!(
+        r#"#cloud-config
 users:
   - name: box
     groups: sudo, docker
@@ -25,55 +75,26 @@ users:
     shell: /bin/bash
     #ssh_pwauth: true
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box
-
-write_files:
-  - path: /etc/cloud/cloud.cfg.d/80_disable_network_after_firstboot.cfg
-    content: |
-      # Disable network configuration after first boot
-      network:
-        config: disabled
-"#;
-
-pub struct MetaData {
-    pub hostname: String,
-}
-
-pub fn write_seed_iso(output: &Path, metadata: MetaData) -> Result<()> {
-    let output = String::from(output.to_str().unwrap());
-
-    // https://cloudinit.readthedocs.io/en/latest/topics/network-config-format-v2.html#network-config-v2
-    let metadata = format!(r#"local-hostname: {}"#, metadata.hostname);
-
-    let mut file_entries = Vec::new();
-    let entry = FileEntry {
-        name: String::from("meta-data"),
-        content: String::from(&metadata),
-        size: metadata.len() as usize,
-        lba: 0,
-        aligned_size: utils::align_up(metadata.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
-    };
-    file_entries.push(entry);
+      - {}
+"#,
+        ssh_authorized_key
+    );
 
     let entry = FileEntry {
         name: String::from("user-data"),
-        content: String::from(USER_DATA),
-        size: USER_DATA.len() as usize,
+        content: String::from(&data),
+        size: data.len() as usize,
         lba: 0,
-        aligned_size: utils::align_up(USER_DATA.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
+        aligned_size: utils::align_up(data.len() as i32, LOGIC_SIZE_U32 as i32) as usize,
     };
-    file_entries.push(entry);
 
-    file_entries.push(network_config());
-
-    iso::create_iso(output, file_entries)?;
-    Ok(())
+    Ok(entry)
 }
 
 /*
   Network configuration can be provided to cloud-init in Networking Config Version 2 by providing that YAML formatted data in a file named network-config. If found, this file will override a network-interfaces file.
 */
-fn network_config() -> FileEntry {
+fn network_config(config: &Config) -> FileEntry {
     let config = format!(
         r#"version: 2
 ethernets:
@@ -83,7 +104,7 @@ ethernets:
     addresses:
       - 192.168.56.{}/24
 "#,
-        101
+        config.host
     );
 
     let entry = FileEntry {
@@ -101,12 +122,28 @@ ethernets:
 mod tests {
 
     use anyhow::Result;
+    use rand_core::OsRng;
+    use ssh_key::{Algorithm, PrivateKey};
+    use tempfile::NamedTempFile;
 
-    #[ignore]
+    use super::*;
+
     #[test]
     fn test_write_seed_iso() -> Result<()> {
-        //let output = Path::new("/home/david/workspace/box/virtualbox/init/seed.iso");
-        //write_seed_iso(&output)?;
+        let key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)?;
+        let authorized_key = key.public_key().clone();
+
+        let config = Config {
+            hostname: String::from("test"),
+            host: 1,
+            user: User {
+                ssh_key: Some(key),
+                ssh_authorized_key: authorized_key,
+            },
+        };
+
+        let file = NamedTempFile::new()?;
+        write_seed_iso(&file.path(), config)?;
         Ok(())
     }
 }

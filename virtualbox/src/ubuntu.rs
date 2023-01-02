@@ -2,10 +2,12 @@ use std::io::{self, Write};
 use std::process::Command;
 
 use anyhow::Result;
-use cloud::{write_seed_iso, MetaData};
+use cloud::{write_seed_iso, Config, User};
+use ssh_key::PrivateKey;
 
 use crate::network;
 use crate::ova;
+use crate::ssh::private_key;
 use crate::{manage, VIRTUALBOX_PATH};
 
 // https://github.com/marysaka/mkisofs-rs
@@ -29,13 +31,33 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let seed = VIRTUALBOX_PATH.join(name).join("seed.iso");
-    write_seed_iso(
-        &seed,
-        MetaData {
-            hostname: String::from(name),
+    // config network
+
+    let output = Command::new(manage::get_cmd())
+        .args(["modifyvm", name, "--nic1", "nat"])
+        .output()?;
+    io::stdout().write_all(&output.stdout)?;
+
+    let ssh_port = network::set_port_forward(name).await?;
+    network::set_hostonly(name)?;
+
+    // create seed.iso
+
+    let host: u8 = (ssh_port - 2200).try_into()?;
+    let key: PrivateKey = private_key().await?;
+    let authorized_key = key.public_key().clone();
+
+    let config = Config {
+        hostname: String::from(name),
+        host,
+        user: User {
+            ssh_key: Some(key),
+            ssh_authorized_key: authorized_key,
         },
-    )?;
+    };
+
+    let seed = VIRTUALBOX_PATH.join(name).join("seed.iso");
+    write_seed_iso(&seed, config)?;
 
     let output = Command::new(manage::get_cmd())
         .args([
@@ -54,16 +76,6 @@ pub async fn create(name: &str) -> Result<()> {
         .arg(seed.to_path_buf())
         .output()?;
     io::stdout().write_all(&output.stdout)?;
-
-    // VBoxManage.exe storageattach "<uuid|vmname>" --storagectl IDE --port 0 --device 0 --medium "none"
-
-    let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--nic1", "nat"])
-        .output()?;
-    io::stdout().write_all(&output.stdout)?;
-
-    network::set_port_forward(name).await?;
-    network::set_hostonly(name)?;
 
     Ok(())
 }

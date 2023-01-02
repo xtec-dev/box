@@ -8,3 +8,8 @@ anyhow = "1.0"
 byteorder = "1"
 chrono = "0.4"
 core = { path = "../core" }
+ssh-key = { version = "0.5", features = ["ed25519", "getrandom"] }
+
+[dev-dependencies]
+rand_core = "0.6" 
+tempfile = "3.3"

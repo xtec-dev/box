@@ -57,7 +57,7 @@ pub fn set_hostonly(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn set_port_forward(name: &str) -> Result<()> {
+pub async fn set_port_forward(name: &str) -> Result<u16> {
     let _lock = FORWARD_MUTEX.lock().await;
 
     let mut ports = Vec::new();
@@ -68,7 +68,7 @@ pub async fn set_port_forward(name: &str) -> Result<()> {
     }
     ports.sort();
 
-    let mut ssh_port = 2201;
+    let mut ssh_port: u16 = 2201;
     for port in ports {
         if port == ssh_port {
             ssh_port += 1;
@@ -83,5 +83,5 @@ pub async fn set_port_forward(name: &str) -> Result<()> {
         .args(["modifyvm", name, "--natpf1", &rule])
         .output()?;
     std::io::stdout().write_all(&output.stdout)?;
-    Ok(())
+    Ok(ssh_port)
 }
