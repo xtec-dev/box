@@ -18,7 +18,7 @@ mod iso;
 
 pub struct Config {
     pub hostname: String,
-    pub host: u8,
+    pub enp0s3: String,
     pub user: User,
 }
 
@@ -120,9 +120,9 @@ ethernets:
     dhcp4: true
   enp0s8:
     addresses:
-      - 192.168.56.{}/24
+      - {}/24
 "#,
-        config.host
+        config.enp0s3
     );
 
     let entry = FileEntry {
@@ -153,7 +153,7 @@ mod tests {
 
         let config = Config {
             hostname: String::from("test"),
-            host: 1,
+            enp0s3: String::from("192.168.56.90"),
             user: User {
                 ssh_key: Some(key),
                 ssh_authorized_key: authorized_key,

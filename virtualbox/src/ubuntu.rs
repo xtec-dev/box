@@ -38,18 +38,17 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let ssh_port = network::set_port_forward(name).await?;
-    network::set_hostonly(name)?;
+    network::set_hostonly(name).await?;
 
     // create seed.iso
 
-    let host: u8 = (ssh_port - 2200).try_into()?;
+    let host = network::get_hostonly(name)?;
     let key: PrivateKey = private_key().await?;
     let authorized_key = key.public_key().clone();
 
     let config = Config {
         hostname: String::from(name),
-        host,
+        enp0s3: host,
         user: User {
             ssh_key: Some(key),
             ssh_authorized_key: authorized_key,

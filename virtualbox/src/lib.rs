@@ -96,8 +96,7 @@ impl Machine {
 
     pub async fn ssh(&self) -> Result<()> {
         self.start().await?;
-        let port = self.info()?.ssh_port()?;
-        ssh::connect(port).await
+        ssh::connect(&self.name).await
     }
 
     pub async fn start(&self) -> Result<()> {
@@ -152,6 +151,10 @@ impl Machine {
 
         Ok(())
     }
+
+    pub fn get_ip(&self) -> Result<String> {
+        network::get_hostonly(&self.name)
+    }
 }
 
 pub struct MachineInfo(String);
@@ -190,24 +193,6 @@ impl MachineInfo {
             }
         }
         map
-    }
-
-    pub fn ssh_port(&self) -> Result<u16> {
-        // Forwarding(1)="ssh,tcp,127.0.0.1,2206,,22"
-        let regex = Regex::new(r#"^Forwarding.*="ssh.*,(\d*),,22"#).unwrap();
-
-        for line in self.0.split("\n") {
-            if line.len() == 0 {
-                continue;
-            }
-
-            if let Some(caps) = regex.captures(line) {
-                let port = caps[1].parse::<u16>()?;
-                return Ok(port);
-            }
-        }
-
-        bail!("ssh forward port not found")
     }
 
     pub fn state(&self) -> Result<State> {
@@ -265,21 +250,22 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn info_ssh_port() -> Result<()> {
-        let info = MachineInfo(String::from(
-            r#"name="box"
-nic1="nat"
-nictype1="82540EM"
-Forwarding(0)="http,tcp,127.0.0.1,8080,,80"
-Forwarding(1)="ssh,tcp,127.0.0.1,2206,,22"
-"#,
-        ));
+    /*
+        #[test]
+        fn info_ssh_port() -> Result<()> {
+            let info = MachineInfo(String::from(
+                r#"name="box"
+    nic1="nat"
+    nictype1="82540EM"
+    Forwarding(0)="http,tcp,127.0.0.1,8080,,80"
+    Forwarding(1)="ssh,tcp,127.0.0.1,2206,,22"
+    "#,
+            ));
 
-        assert_eq!(2206, info.ssh_port()?);
-        Ok(())
-    }
-
+            assert_eq!(2206, info.ssh_port()?);
+            Ok(())
+        }
+    */
     #[test]
     fn info_map() {
         /* error

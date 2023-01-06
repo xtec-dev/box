@@ -6,6 +6,8 @@ use once_cell::sync::Lazy;
 use ssh_key::rand_core::OsRng;
 use ssh_key::{Algorithm, LineEnding, PrivateKey};
 
+use crate::network;
+
 static KEY_PATH: Lazy<PathBuf> = Lazy::new(|| {
     home::home_dir()
         .expect("Home dir")
@@ -13,22 +15,23 @@ static KEY_PATH: Lazy<PathBuf> = Lazy::new(|| {
         .join("id_ed25519_box")
 });
 
-pub async fn connect(port: u16) -> Result<()> {
+pub async fn connect(name: &str) -> Result<()> {
     if !KEY_PATH.exists() {
         private_key().await?;
     }
 
+    let ip = network::get_hostonly(name)?;
+    let host = format!("box@{}", ip);
+
     let mut child = Command::new("ssh")
         .args([
-            "-p",
-            &port.to_string(),
             "-i",
             &KEY_PATH.as_path().as_os_str().to_str().unwrap(),
             "-o",
             "UserKnownHostsFile=/dev/null",
             "-o",
             "StrictHostKeyChecking=no",
-            "box@127.0.0.1",
+            &host,
         ])
         .spawn()
         .unwrap();

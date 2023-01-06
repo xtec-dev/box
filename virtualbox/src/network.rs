@@ -26,15 +26,21 @@ $adapter = "VirtualBox Host-Only Ethernet Adapter"
         }#>
 */
 
-// vboxmanage setextradata xtec-1 host 2
-
 // https://www.virtualbox.org/manual/ch08.html#vboxmanage-dhcpserver
+
+pub fn get_hostonly(name: &str) -> Result<String> {
+    let host = get_host(name)?;
+    match host {
+        None => bail!("{}: no host only nic set:", name),
+        Some(host) => Ok(format!("192.168.56.{}", host)),
+    }
+}
 
 // ip  -o -4 addr
 // IP address for the host  192.168.56.1
 // DHCP-Server Range        192.168.56.101 - 192.168.56.254
 // The IP range limiting the IP addresses that will be provided to the guest systems 192.168.56.2 - 192.168.56.100
-pub fn set_hostonly(name: &str) -> Result<()> {
+pub async fn set_hostonly(name: &str) -> Result<()> {
     /*
         let mut cmd = Command::new(manage::get_cmd());
         cmd.args(["list", "--hostonlyifs"]);
@@ -59,17 +65,18 @@ pub fn set_hostonly(name: &str) -> Result<()> {
 
     std::io::stdout().write_all(&output.stdout)?;
 
-    Ok(())
+    set_host(name).await
 }
+
+const KEY: &str = "hostonly";
 
 fn get_host(name: &str) -> Result<Option<u8>> {
     let output = Command::new(manage::get_cmd())
-        .args(["getextradata", name, "host"])
+        .args(["getextradata", name, KEY])
         .output()?;
 
     if output.status.success() {
         let result = String::from_utf8_lossy(&output.stdout);
-        println!("{}", result);
         let mut result = result.split(':');
         if let (Some(_), Some(host)) = (result.next(), result.next()) {
             let host: u8 = host
@@ -86,41 +93,35 @@ fn get_host(name: &str) -> Result<Option<u8>> {
     }
 }
 
-fn set_host(name: &str, host: u8) -> Result<()> {
-    let output = Command::new(manage::get_cmd())
-        .args(["setextradata", name, &host.to_string()])
-        .output()?;
-    std::io::stdout().write_all(&output.stdout)?;
-    Ok(())
-}
+async fn set_host(name: &str) -> Result<()> {
+    if get_host(name)?.is_some() {
+        return Ok(());
+    };
 
-pub async fn set_port_forward(name: &str) -> Result<u16> {
     let _lock = FORWARD_MUTEX.lock().await;
 
-    let mut ports = Vec::new();
+    let mut hosts = Vec::new();
     for vm in crate::list_vms()? {
-        if let Ok(port) = vm.info()?.ssh_port() {
-            ports.push(port);
+        if let Some(host) = get_host(&vm.name)? {
+            hosts.push(host);
         }
     }
-    ports.sort();
+    hosts.sort();
 
-    let mut ssh_port: u16 = 2201;
-    for port in ports {
-        if port == ssh_port {
-            ssh_port += 1;
+    let mut host: u8 = 2;
+    for port in hosts {
+        if port == host {
+            host += 1;
         } else {
             break;
         }
     }
 
-    let rule = format!("ssh,tcp,127.0.0.1,{},,22", ssh_port);
-
     let output = Command::new(manage::get_cmd())
-        .args(["modifyvm", name, "--natpf1", &rule])
+        .args(["setextradata", name, KEY, &host.to_string()])
         .output()?;
     std::io::stdout().write_all(&output.stdout)?;
-    Ok(ssh_port)
+    Ok(())
 }
 
 #[cfg(test)]

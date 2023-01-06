@@ -5,21 +5,21 @@ use virtualbox::Machine;
 
 pub async fn start(name: &String) -> Result<()> {
     let machine = Machine::new(name.clone());
-    let port = machine.info()?.ssh_port()?;
+
+    let host = machine.get_ip()?;
 
     let ssh_path = home::home_dir().expect("user home").join(".ssh");
     let identity_path = ssh_path.join("id_ed25519_box");
 
     let config = format!(
         r#"Host code
-    HostName 127.0.0.1
+    HostName {}
     IdentityFile {}
     User box
-    Port {}
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null"#,
+        host,
         identity_path.as_os_str().to_str().unwrap(),
-        port
     );
 
     let mut file = OpenOptions::new()
