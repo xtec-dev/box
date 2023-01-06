@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::process::Command;
 
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
 
@@ -25,6 +25,8 @@ $adapter = "VirtualBox Host-Only Ethernet Adapter"
             exit
         }#>
 */
+
+// vboxmanage setextradata xtec-1 host 2
 
 // https://www.virtualbox.org/manual/ch08.html#vboxmanage-dhcpserver
 
@@ -54,8 +56,41 @@ pub fn set_hostonly(name: &str) -> Result<()> {
             &adapter,
         ])
         .output()?;
+
     std::io::stdout().write_all(&output.stdout)?;
 
+    Ok(())
+}
+
+fn get_host(name: &str) -> Result<Option<u8>> {
+    let output = Command::new(manage::get_cmd())
+        .args(["getextradata", name, "host"])
+        .output()?;
+
+    if output.status.success() {
+        let result = String::from_utf8_lossy(&output.stdout);
+        println!("{}", result);
+        let mut result = result.split(':');
+        if let (Some(_), Some(host)) = (result.next(), result.next()) {
+            let host: u8 = host
+                .trim()
+                .parse::<u8>()
+                .with_context(|| format!("parsing {}", host))?;
+            Ok(Some(host))
+        } else {
+            Ok(None)
+        }
+    } else {
+        // let err = String::from_utf8_lossy(&output.stderr);
+        bail!("todo: getextradata error");
+    }
+}
+
+fn set_host(name: &str, host: u8) -> Result<()> {
+    let output = Command::new(manage::get_cmd())
+        .args(["setextradata", name, &host.to_string()])
+        .output()?;
+    std::io::stdout().write_all(&output.stdout)?;
     Ok(())
 }
 
@@ -86,4 +121,20 @@ pub async fn set_port_forward(name: &str) -> Result<u16> {
         .output()?;
     std::io::stdout().write_all(&output.stdout)?;
     Ok(ssh_port)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use anyhow::Result;
+
+    use super::*;
+
+    #[test]
+    fn test_host() -> Result<()> {
+        let host = get_host("xtec-1")?;
+        assert_eq!(Some(2), host);
+
+        Ok(())
+    }
 }
