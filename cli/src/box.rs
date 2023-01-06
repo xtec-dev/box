@@ -122,7 +122,7 @@ fn list() -> Result<()> {
         .load_preset(UTF8_FULL)
         .apply_modifier(UTF8_ROUND_CORNERS)
         .set_content_arrangement(ContentArrangement::Dynamic);
-    table.set_header(vec!["Name", "Status"]);
+    table.set_header(vec!["Name", "Status", "IP"]);
 
     for vm in vms {
         let info = vm.info()?;
@@ -130,7 +130,11 @@ fn list() -> Result<()> {
             Ok(state) => state.to_string(),
             Err(err) => format!("error: {}", err),
         };
-        table.add_row(vec![vm.name, state]);
+        let ip = match vm.get_ip() {
+            Ok(ip) => ip,
+            Err(err) => format!("error: {}", err),
+        };
+        table.add_row(vec![vm.name, state, ip]);
     }
 
     println!("{table}");
