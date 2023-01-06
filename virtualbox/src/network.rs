@@ -29,7 +29,9 @@ $adapter = "VirtualBox Host-Only Ethernet Adapter"
 // https://www.virtualbox.org/manual/ch08.html#vboxmanage-dhcpserver
 
 // ip  -o -4 addr
-
+// IP address for the host  192.168.56.1
+// DHCP-Server Range        192.168.56.101 - 192.168.56.254
+// The IP range limiting the IP addresses that will be provided to the guest systems 192.168.56.2 - 192.168.56.100
 pub fn set_hostonly(name: &str) -> Result<()> {
     /*
         let mut cmd = Command::new(manage::get_cmd());

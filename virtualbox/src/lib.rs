@@ -10,7 +10,6 @@ use std::time::Duration;
 
 use regex::Regex;
 
-mod coreos;
 mod manage;
 //mod mscom;
 mod network;
@@ -23,11 +22,8 @@ mod ubuntu;
 
 pub static VIRTUALBOX_PATH: Lazy<PathBuf> = Lazy::new(|| core::BOX_PATH.join("virtualbox"));
 
-pub async fn create(name: &str, image: Image) -> Result<()> {
-    match image {
-        Image::CoreOS => coreos::create(name).await,
-        Image::Ubuntu => ubuntu::create(name).await,
-    }
+pub async fn create(name: &str) -> Result<()> {
+    ubuntu::create(name).await
 }
 
 pub fn list_vms() -> Result<Vec<Machine>> {
@@ -38,11 +34,6 @@ pub fn list_vms() -> Result<Vec<Machine>> {
         .map(|(name, _)| Machine { name: name.clone() })
         .collect();
     Ok(vms)
-}
-
-pub enum Image {
-    CoreOS,
-    Ubuntu,
 }
 
 #[derive(Clone)]
