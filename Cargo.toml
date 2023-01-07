@@ -6,3 +6,6 @@ members = [
     "core", 
     "virtualbox"
     ]
+
+[profile.release]
+opt-level = 1
