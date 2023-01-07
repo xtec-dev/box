@@ -132,8 +132,13 @@ class VM {
             Write-Host("$($this.Name): starting machine ...")
             Write-Host(vboxmanage startvm $this.Name --type headless)
         }    
-                
+
         Write-Host("$($this.Name): waiting ssh ready ...")
+        $this.Config()
+    }
+    
+    [void] Config() {
+
         [SSH]::Execute($this, "sudo hostnamectl set-hostname $($this.Name); echo '
         network:
           ethernets:
@@ -193,6 +198,8 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
     }
 
     static [void] Connect([VM] $vm) {
+
+        $vm.Config()
         
         $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
 
