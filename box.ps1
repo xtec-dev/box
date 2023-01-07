@@ -131,10 +131,10 @@ class VM {
         if (-not($vm.State -eq 5)) {
             Write-Host("$($this.Name): starting machine ...")
             Write-Host(vboxmanage startvm $this.Name --type headless)
+            Write-Host("$($this.Name): waiting ssh ready ...")
+            $this.Config()
         }    
 
-        Write-Host("$($this.Name): waiting ssh ready ...")
-        $this.Config()
     }
     
     [void] Config() {
@@ -199,6 +199,7 @@ G0/9mzUbMg3S4jPfma3YAAAABmFsdW1uZQECAwQFBgc=
 
     static [void] Connect([VM] $vm) {
 
+        $vm.Start()
         $vm.Config()
         
         $ssh = "-p $($vm.SSH) -i $([SSH]::key) -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no alumne@127.0.0.1"
