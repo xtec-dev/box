@@ -24,7 +24,7 @@ jobs:
           JF_ENV_1: ${{ secrets.JFROG }}
       - run: |
           jf c use xtec
-          jf rt u target/release/box.exe bin/xbox.exe
+          jf rt u target/release/box.exe bin/box.exe
 
   linux:
     name: linux
