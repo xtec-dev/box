@@ -1,9 +1,10 @@
 use anyhow::Result;
+
 use std::io::{self, Write};
 use std::process::Command;
 
-use crate::network;
 use crate::ova;
+use crate::ssh::ssh_authorized_key;
 use crate::{manage, VIRTUALBOX_PATH};
 
 /*
@@ -31,7 +32,7 @@ https://docs.fedoraproject.org/en-US/fedora-coreos/authentication/#_enabling_ssh
 const COREOS_URL: &str = "https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/37.20221211.3.0/x86_64/fedora-coreos-37.20221211.3.0-virtualbox.x86_64.ova";
 
 pub async fn create(name: &str) -> Result<()> {
-    let ova_path = ova::get("coreos-37", COREOS_URL).await?;
+    let ova_path = ova::get("coreos-37-20221211", COREOS_URL).await?;
 
     println!("{}: import", name);
     let output = Command::new(manage::get_cmd())
@@ -42,7 +43,7 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    let ignition = new_ignition(name);
+    let ignition = new_ignition(name).await?;
 
     let output = Command::new(manage::get_cmd())
         .args(["guestproperty", "set", name, "/Ignition/Config", &ignition])
@@ -55,12 +56,14 @@ pub async fn create(name: &str) -> Result<()> {
     Ok(())
 }
 
-fn new_ignition(hostname: &str) -> String {
+async fn new_ignition(hostname: &str) -> Result<String> {
     // podman run -i --rm quay.io/coreos/butane:release --pretty --strict < config.bu > config.ign
 
     // TODO fix zincati
     //sudo systemctl disable --now zincati.service
     // https://github.com/coreos/fedora-coreos-tracker/issues/392
+
+    let ssh_authorized_key = ssh_authorized_key().await?;
 
     let ignition = format!(
         r#"{{
@@ -72,7 +75,7 @@ fn new_ignition(hostname: &str) -> String {
         "groups": [ "docker", "wheel"],
         "passwordHash": "$y$j9T$BAlET20ZhfuQ.YzttOAaA.$8O8Fb/0UMSq5TPyufNVGffUrUYiazipQglTTo4VN.iB",
         "sshAuthorizedKeys": [
-          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJdMddarXNcDnTCO2TFoF5uqrD3sicDofldtedxhlDdU box"
+          "{}"
         ]
       }}
     ]
@@ -90,8 +93,8 @@ fn new_ignition(hostname: &str) -> String {
     ]
   }}
 }}"#,
-        hostname
+        ssh_authorized_key, hostname
     );
 
-    ignition
+    Ok(ignition)
 }

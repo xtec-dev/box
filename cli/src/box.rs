@@ -74,9 +74,11 @@ enum Commands {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Image {
-    /// Fedora 37
+    /// Coreos
+    Coreos,
+    /// Fedora
     Fedora,
-    /// Ubuntu 22.04
+    /// Ubuntu
     Ubuntu,
 }
 
@@ -122,6 +124,7 @@ async fn code(name: &String) -> Result<()> {
 async fn create(name: &String, provider: &Provider, image: &Image) -> Result<()> {
     let _p = provider;
     match image {
+        Image::Coreos => virtualbox::create(name, virtualbox::Image::Coreos).await,
         Image::Fedora => virtualbox::create(name, virtualbox::Image::Fedora).await,
         Image::Ubuntu => virtualbox::create(name, virtualbox::Image::Ubuntu).await,
     }

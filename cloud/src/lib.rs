@@ -27,6 +27,26 @@ pub struct User {
     pub ssh_authorized_key: PublicKey,
 }
 
+pub fn write_seed(
+    output: &Path,
+    metad_data: &str,
+    user_data: &str,
+    network_config: Option<&str>,
+) -> Result<()> {
+    let output = String::from(output.to_str().unwrap());
+
+    let mut file_entries = Vec::new();
+
+    /*
+        file_entries.push(meta_data(&config.hostname));
+        file_entries.push(user_data(&config)?);
+        file_entries.push(network_config(&config));
+    */
+
+    iso::create_iso(output, file_entries)?;
+    Ok(())
+}
+
 pub fn write_seed_iso(output: &Path, config: Config) -> Result<()> {
     let output = String::from(output.to_str().unwrap());
 

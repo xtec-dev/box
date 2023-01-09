@@ -11,6 +11,7 @@ use std::time::Duration;
 use regex::Regex;
 
 mod coreos;
+mod fedora;
 mod manage;
 //mod mscom;
 mod network;
@@ -25,12 +26,14 @@ pub static VIRTUALBOX_PATH: Lazy<PathBuf> = Lazy::new(|| core::BOX_PATH.join("vi
 
 pub async fn create(name: &str, image: Image) -> Result<()> {
     match image {
-        Image::Fedora => coreos::create(name).await,
+        Image::Coreos => coreos::create(name).await,
+        Image::Fedora => fedora::create(name).await,
         Image::Ubuntu => ubuntu::create(name).await,
     }
 }
 
 pub enum Image {
+    Coreos,
     Fedora,
     Ubuntu,
 }
@@ -94,6 +97,10 @@ impl Machine {
         io::stdout().write_all(&output.stdout)?;
 
         if output.status.success() {
+            let path = VIRTUALBOX_PATH.to_path_buf().join(&self.name);
+            if path.exists() {
+                tokio::fs::remove_dir_all(path).await?;
+            }
             Ok(())
         } else {
             let msg = String::from_utf8(output.stderr)?;

@@ -39,6 +39,12 @@ pub async fn connect(name: &str) -> Result<()> {
 
     Ok(())
 }
+pub async fn ssh_authorized_key() -> Result<String> {
+    let key: PrivateKey = private_key().await?;
+    let authorized_key = key.public_key().clone();
+    let key = authorized_key.to_openssh()?;
+    Ok(key)
+}
 
 // key.public_key().to_openssh()?;
 pub async fn private_key() -> Result<PrivateKey> {

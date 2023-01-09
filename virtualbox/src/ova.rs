@@ -60,3 +60,11 @@ async fn download_file(client: &Client, url: &str, path: &Path) -> Result<()> {
     pb.finish_with_message(&format!("Downloaded {} to {:?}", url, path));
     return Ok(());
 }
+
+/*
+https://docs.fileformat.com/disc-and-media/ova/
+
+An OVA (Open Virtual Appliance) file is an OVF directory saved as an archive using the .tar archiving format. It is a virtual appliance package file that contains files for distribution of software that runs on a virtual machine.
+
+ */
+fn _box() {}
