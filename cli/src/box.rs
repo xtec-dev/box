@@ -34,6 +34,10 @@ enum Commands {
         /// Provider
         #[arg(value_enum,short,long, default_value_t = Provider::Virtualbox)]
         provider: Provider,
+
+        /// OS
+        #[arg(value_enum, short,long,default_value_t = Image::Ubuntu)]
+        image: Image,
     },
 
     /// Delete a VM.
@@ -69,6 +73,14 @@ enum Commands {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum Image {
+    /// Fedora 37
+    Fedora,
+    /// Ubuntu 22.04
+    Ubuntu,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 enum Provider {
     /// VirtualBox
     Virtualbox,
@@ -80,7 +92,11 @@ async fn main() {
 
     let result = match &cli.command {
         Some(Commands::Code { name }) => code(name).await,
-        Some(Commands::Create { name, provider }) => create(name, provider).await,
+        Some(Commands::Create {
+            name,
+            provider,
+            image,
+        }) => create(name, provider, image).await,
         Some(Commands::Delete { name }) => delete(name).await,
         Some(Commands::List {}) => list(),
         Some(Commands::SSH { name }) => ssh(name).await,
@@ -103,9 +119,12 @@ async fn code(name: &String) -> Result<()> {
     code::start(name).await
 }
 
-async fn create(name: &String, provider: &Provider) -> Result<()> {
+async fn create(name: &String, provider: &Provider, image: &Image) -> Result<()> {
     let _p = provider;
-    virtualbox::create(name).await
+    match image {
+        Image::Fedora => virtualbox::create(name, virtualbox::Image::Fedora).await,
+        Image::Ubuntu => virtualbox::create(name, virtualbox::Image::Ubuntu).await,
+    }
 }
 
 async fn delete(name: &String) -> Result<()> {
