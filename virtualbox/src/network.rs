@@ -11,6 +11,13 @@ static HOST_MUTEX: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(0));
 
 /*
 
+vboxmanage showvminfo core | grep "NIC 1:" | awk '{print tolower($4)}' | sed 's/.\{2\}/&:/g' | sed 's/.\{2\}$//'
+
+arp -a | grep 08:00:27:a5:db:a3 | awk '{print $2}' | tail -c +2 | head -c -2
+*/
+
+/*
+
 $adapter = "VirtualBox Host-Only Ethernet Adapter"
         #Linux "vboxnet0"
 
