@@ -138,21 +138,13 @@ fn network_config(config: &Config) -> FileEntry {
 ethernets:
   enp0s3:
     optional: true
-    addresses:
-      - 10.0.2.{}/24
-    routes:
-      - to: default
-        via: 10.0.2.2
-    nameservers:
-      addresses:
-        - 1.1.1.1
-      search: []
+    dhcp4: true
   enp0s8:
     optional: true
     addresses:
       - 192.168.56.{}/24
 "#,
-        config.host, config.host
+        config.host
     );
 
     let entry = FileEntry {
