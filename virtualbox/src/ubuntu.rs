@@ -31,24 +31,24 @@ pub async fn create(name: &str) -> Result<()> {
         .output()?;
     io::stdout().write_all(&output.stdout)?;
 
-    // config network
+    // modify vm
 
     let output = Command::new(manage::get_cmd())
         .args(["modifyvm", name, "--nic1", "nat"])
         .output()?;
     io::stdout().write_all(&output.stdout)?;
-
     network::set_hostonly(name).await?;
+    
 
     // create seed.iso
 
-    let host = network::get_hostonly(name)?;
+    let host = network::get_host(name)?.expect("host no set on vbox");
     let key: PrivateKey = private_key().await?;
     let authorized_key = key.public_key().clone();
 
     let config = Config {
         hostname: String::from(name),
-        enp0s3: host,
+        host: host,
         user: User {
             ssh_key: Some(key),
             ssh_authorized_key: authorized_key,

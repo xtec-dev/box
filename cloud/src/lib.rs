@@ -18,7 +18,7 @@ mod iso;
 
 pub struct Config {
     pub hostname: String,
-    pub enp0s3: String,
+    pub host: u8,
     pub user: User,
 }
 
@@ -117,12 +117,22 @@ fn network_config(config: &Config) -> FileEntry {
         r#"version: 2
 ethernets:
   enp0s3:
-    dhcp4: true
-  enp0s8:
+    optional: true
     addresses:
-      - {}/24
+      - 10.0.2.{}/24
+    routes:
+      - to: default
+        via: 10.0.2.2
+    nameservers:
+      addresses:
+        - 1.1.1.1
+      search: []
+  enp0s8:
+    optional: true
+    addresses:
+      - 192.168.56.{}/24
 "#,
-        config.enp0s3
+        config.host, config.host
     );
 
     let entry = FileEntry {
@@ -153,7 +163,7 @@ mod tests {
 
         let config = Config {
             hostname: String::from("test"),
-            enp0s3: String::from("192.168.56.90"),
+            host: 20,
             user: User {
                 ssh_key: Some(key),
                 ssh_authorized_key: authorized_key,

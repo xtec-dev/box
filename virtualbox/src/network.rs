@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 
 use crate::manage;
 
-static FORWARD_MUTEX: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(0));
+static HOST_MUTEX: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(0));
 
 /*
 
@@ -70,7 +70,7 @@ pub async fn set_hostonly(name: &str) -> Result<()> {
 
 const KEY: &str = "hostonly";
 
-fn get_host(name: &str) -> Result<Option<u8>> {
+pub fn get_host(name: &str) -> Result<Option<u8>> {
     let output = Command::new(manage::get_cmd())
         .args(["getextradata", name, KEY])
         .output()?;
@@ -98,7 +98,7 @@ async fn set_host(name: &str) -> Result<()> {
         return Ok(());
     };
 
-    let _lock = FORWARD_MUTEX.lock().await;
+    let _lock = HOST_MUTEX.lock().await;
 
     let mut hosts = Vec::new();
     for vm in crate::list_vms()? {
@@ -108,7 +108,7 @@ async fn set_host(name: &str) -> Result<()> {
     }
     hosts.sort();
 
-    let mut host: u8 = 2;
+    let mut host: u8 = 15;
     for port in hosts {
         if port == host {
             host += 1;
